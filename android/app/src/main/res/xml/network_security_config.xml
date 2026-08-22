@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  أندرويد يمنع أي اتصال HTTP غير مشفّر افتراضيًا منذ Android 9 (API 28).
+  و«localhost» مو مستثنى تلقائيًا إلا من Android 17 (API 37) فما فوق —
+  جهاز الاختبار على Android 16، فالمنع كان يقتل طلب الرفع داخل النظام
+  قبل ما يطلع من التطبيق أصلًا (السيرفر ما كان يستقبل أي شي).
+
+  الاستثناء هنا مقصور على عناوين الجهاز نفسه فقط:
+    - localhost / 127.0.0.1 / ::1 → باك-إند التطوير عبر `adb reverse`
+    - 10.0.2.2                    → عنوان جهاز المضيف من داخل محاكي أندرويد
+
+  ما نستخدم `android:usesCleartextTraffic="true"` بالـ manifest عمدًا —
+  ذاك يفتح HTTP لكل عنوان بالدنيا. هذا الملف يفتحه للجهاز المحلي بس،
+  وأي اتصال حقيقي بالإنترنت يبقى ملزَمًا بـ HTTPS.
+
+  ملاحظة للنشر الفعلي: السيرفر المنشور لازم يكون HTTPS، وعندها هذا الملف
+  ما يحتاج يتغيّر — يبقى استثناءً محليًا بلا أثر على الإنتاج.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">::1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

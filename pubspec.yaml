@@ -1,0 +1,67 @@
+name: mindrop
+description: "Mindrop — التقط أفكارك الصوتية ودعها تتنظم تلقائيًا."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # دعم الترجمة واتجاه RTL/LTR التلقائي حسب لغة الجهاز
+  flutter_localizations:
+    sdk: flutter
+
+  # مطلوبة كاعتماد مباشر لأن الكود المولَّد من gen-l10n يستوردها.
+  # نتركها `any` عشان تتبع النسخة اللي يثبّتها flutter_localizations
+  # ولا يصير تعارض إصدارات.
+  intl: any
+
+  cupertino_icons: ^1.0.8
+
+  # خط الهوية Urbanist (يُجلب ويُخزَّن محليًا أول تشغيل)
+  google_fonts: ^8.2.1
+
+  # تسجيل الصوت محليًا (المرحلة 1: التسجيل والتخزين)
+  record: ^7.1.1
+
+  # صلاحية المايك مع تحكم كامل بحالة الرفض/الرفض الدائم
+  permission_handler: ^13.0.1
+
+  # مسار مجلد التطبيق لحفظ ملفات التسجيل محليًا
+  path_provider: ^2.1.6
+
+  # معرّف فريد (id) لكل تسجيل/مسودة
+  uuid: ^4.6.0
+
+  # ------------------------------------------------------------------------
+  # Firebase — مشروع mindrop-wal-2026، متصل عبر flutterfire configure.
+  # Storage لسا معطّل (يحتاج ترقية Blaze) — الصوت سيُرفع لاحقًا عبر
+  # باك-إند خاص بدل Firebase Storage مباشرة.
+  # ------------------------------------------------------------------------
+  firebase_core: ^4.13.0
+  firebase_auth: ^6.5.7
+  cloud_firestore: ^6.8.0
+  audio_waveforms: ^2.0.2
+  # firebase_storage: ^13.4.6
+
+  # رفع الصوت لباك-إند Mindrop الخاص (Node.js) — بدل Firebase Storage
+  # مباشرة، راجع التعليق فوق.
+  http: ^1.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # يشغّل توليد ملفات الترجمة تلقائيًا مع كل `flutter pub get` / `flutter run`
+  # حسب إعدادات l10n.yaml.
+  generate: true
+
+# ملاحظة: الأرقام أعلاه كانت أحدث إصدار مستقر وقت كتابة هذا الملف (أغسطس 2026).
+# بعد أول "flutter pub get" شغّل "flutter pub outdated" وحدّث أي حزمة صار لها إصدار أجد.

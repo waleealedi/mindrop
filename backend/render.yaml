@@ -1,0 +1,25 @@
+# إعداد النشر على Render.
+#
+# الأسرار **ما تُكتب هنا**: `sync: false` يعني Render يطلبها منك بلوحته
+# ويخزّنها عنده، فما يمر أي مفتاح عبر المستودع.
+#
+# ملاحظة على الخطة المجانية: الخدمة تنام بعد 15 دقيقة بلا حركة واردة،
+# وتحتاج ~دقيقة تصحى. تطبيق Mindrop يتحمّل هذا عمدًا — راجع مهلة الرفع
+# وتصنيف الفشل المؤقت في `lib/services/upload_queue_service.dart`.
+services:
+  - type: web
+    name: mindrop-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    envVars:
+      # Render يحقن PORT بنفسه؛ server.js يقرأه أصلًا.
+      - key: NODE_VERSION
+        value: "22"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_B64
+        sync: false

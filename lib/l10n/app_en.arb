@@ -1,0 +1,98 @@
+{
+  "@@locale": "en",
+
+  "hintIdle": "Tap and start talking",
+  "@hintIdle": {
+    "description": "Hint under the record button while idle"
+  },
+
+  "hintRecording": "Recording — tap to stop",
+  "hintPaused": "Paused — tap to resume",
+
+  "savedLocally": "Your idea is saved on this device",
+  "recordStartFailed": "Couldn't start recording. Try again.",
+  "recordNotSaved": "The recording wasn't saved",
+
+  "micPermissionTitle": "Microphone access needed",
+  "micPermissionRationale": "Mindrop needs your microphone so you can capture ideas by voice.",
+  "micPermissionBlocked": "Microphone access is permanently denied. Open app settings to enable it.",
+
+  "cancel": "Cancel",
+  "allow": "Allow",
+  "openSettings": "Open settings",
+
+  "uploadRetrying": "Retrying upload…",
+  "@uploadRetrying": {
+    "description": "Shown when the user taps the pending chip to retry uploads manually"
+  },
+
+  "pendingUploads": "{count, plural, =1{1 waiting to upload} other{{count} waiting to upload}}",
+  "@pendingUploads": {
+    "description": "Chip showing how many recordings are queued for upload",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "historyTitle": "Your Ideas",
+  "@historyTitle": {
+    "description": "Title of the screen listing previously recorded ideas"
+  },
+
+  "historyEmpty": "No ideas recorded yet",
+  "historyOpenTooltip": "View recorded ideas",
+
+  "statusRecorded": "Waiting to upload",
+  "statusUploading": "Uploading",
+  "statusUploaded": "Uploaded",
+  "statusTranscribing": "Transcribing",
+  "statusAnalyzing": "Analyzing",
+  "statusCompleted": "Completed",
+  "statusFailed": "Upload failed",
+
+  "delete": "Delete",
+  "deleteConfirmTitle": "Delete this idea?",
+  "deleteConfirmBody": "This recording and its transcript will be permanently deleted from your device and from the cloud.",
+
+  "deleteAll": "Delete all",
+  "@deleteAll": {
+    "description": "Header icon tooltip and confirm-dialog button for clearing every recording at once"
+  },
+  "deleteAllConfirmTitle": "Delete all ideas?",
+  "deleteAllConfirmBody": "All recordings and their transcripts will be permanently deleted from your device and from the cloud. This can't be undone.",
+
+  "playbackLoadError": "Couldn't load this recording",
+
+  "transcriptPending": "No transcript yet — it appears here once processing finishes",
+  "@transcriptPending": {
+    "description": "Placeholder on the playback screen before the backend transcript arrives"
+  },
+
+  "analysisTasks": "Tasks",
+  "analysisGoals": "Goals",
+  "analysisIdeas": "Ideas",
+  "analysisTopics": "Topics",
+  "analysisEmpty": "Nothing to extract from this one",
+  "@analysisEmpty": {
+    "description": "Shown when analysis ran but the recording genuinely contained no tasks, goals or ideas"
+  },
+  "mindMapTitle": "Mind map",
+  "mindMapOpen": "View mind map",
+  "mindMapEmpty": "Nothing to map yet — the mind map appears once this recording has been organised",
+  "@mindMapEmpty": {
+    "description": "Empty state on the mind map screen when a recording has no analysis yet"
+  },
+  "mindMapRecordingNode": "Recording",
+
+  "analysisPending": "Organising this idea…",
+  "@analysisPending": {
+    "description": "Shown on the playback screen while backend analysis is still running"
+  },
+
+  "a11yStartRecording": "Start recording",
+  "a11yStopRecording": "Stop recording",
+  "a11yPlayRecording": "Play recording",
+  "a11yPauseRecording": "Pause recording"
+}

@@ -1,0 +1,11 @@
+# إعداد توليد الترجمات (flutter gen-l10n).
+#
+# ملاحظة مهمة: من Flutter 3.32 صار التوليد داخل مجلد المصدر مباشرة بدل
+# الحزمة الوهمية `package:flutter_gen` (اللي أُزيلت). يعني الملف المولَّد
+# يطلع هنا: lib/l10n/app_localizations.dart ويُستورد بمسار عادي نسبي.
+# لا تضف `synthetic-package` — الخيار مهجور.
+
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations

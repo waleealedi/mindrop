@@ -1,0 +1,78 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Widget Preview related
+.widget_preview/
+
+# ---------------------------------------------------------------------------
+# Backend secrets and user data — NEVER commit these.
+#
+# backend/.gitignore already lists these, and nested .gitignore files DO work
+# correctly from the repo root (patterns resolve relative to the file that
+# declares them). They are repeated here on purpose as defence in depth: if
+# backend/.gitignore is ever moved, renamed or deleted, that protection
+# disappears silently and the next `git add -A` would commit real API keys and
+# a Firebase private key. A root-level rule cannot be lost that way.
+# ---------------------------------------------------------------------------
+backend/node_modules/
+backend/.env
+backend/service-account.json
+
+# The user's own recorded audio and transcripts. Private content, never
+# version-controlled. The server is stateless by default now (KEEP_AUDIO off),
+# so this only fills up when a developer opts in locally.
+backend/storage/
+
+# Any stray env or key files anywhere in the tree.
+.env
+.env.*
+!.env.example
+*service-account*.json
+*-private-key.json
+*.pem
+*.p12
+*.keystore
+*.jks

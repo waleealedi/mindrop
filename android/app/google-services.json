@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "96592300820",
+    "project_id": "mindrop-wal-2026",
+    "storage_bucket": "mindrop-wal-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:96592300820:android:d144c3a1e320223bff1001",
+        "android_client_info": {
+          "package_name": "com.mindrop.mindrop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAN4sDv9wR1hFo3oZUqAR6strH9NLncSGs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

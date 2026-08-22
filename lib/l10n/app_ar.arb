@@ -1,0 +1,64 @@
+{
+  "@@locale": "ar",
+
+  "hintIdle": "اضغط وابدأ الكلام",
+  "hintRecording": "جارٍ التسجيل — اضغط للإيقاف",
+  "hintPaused": "متوقف مؤقتًا — اضغط للمتابعة",
+
+  "savedLocally": "تم حفظ فكرتك محليًا",
+  "recordStartFailed": "تعذّر بدء التسجيل، حاول مرة ثانية",
+  "recordNotSaved": "لم يتم حفظ التسجيل",
+
+  "micPermissionTitle": "نحتاج إذن المايك",
+  "micPermissionRationale": "Mindrop يحتاج الوصول للمايك عشان تقدر تلتقط أفكارك بصوتك.",
+  "micPermissionBlocked": "صلاحية المايك مرفوضة بشكل دائم. افتح إعدادات التطبيق لتفعيلها.",
+
+  "cancel": "إلغاء",
+  "allow": "سماح",
+  "openSettings": "فتح الإعدادات",
+
+  "uploadRetrying": "جارٍ إعادة محاولة الرفع…",
+
+  "pendingUploads": "{count, plural, zero{لا شيء بانتظار الرفع} one{تسجيل واحد بانتظار الرفع} two{تسجيلان بانتظار الرفع} few{{count} تسجيلات بانتظار الرفع} many{{count} تسجيلًا بانتظار الرفع} other{{count} تسجيل بانتظار الرفع}}",
+
+  "historyTitle": "أفكارك",
+  "historyEmpty": "لسا ما سجّلت أي فكرة",
+  "historyOpenTooltip": "عرض الأفكار المسجّلة",
+
+  "statusRecorded": "بانتظار الرفع",
+  "statusUploading": "جارِ الرفع",
+  "statusUploaded": "تم الرفع",
+  "statusTranscribing": "جارِ التفريغ",
+  "statusAnalyzing": "جارِ التحليل",
+  "statusCompleted": "مكتمل",
+  "statusFailed": "فشل الرفع",
+
+  "delete": "حذف",
+  "deleteConfirmTitle": "تحذف هذي الفكرة؟",
+  "deleteConfirmBody": "التسجيل ونصّه المفرَّغ بينحذفون نهائيًا من جهازك ومن السحابة.",
+
+  "deleteAll": "حذف الكل",
+  "deleteAllConfirmTitle": "تحذف كل الأفكار؟",
+  "deleteAllConfirmBody": "كل التسجيلات ونصوصها المفرَّغة بتنحذف نهائيًا من جهازك ومن السحابة. ما فيه تراجع.",
+
+  "playbackLoadError": "تعذّر تحميل هذا التسجيل",
+
+  "transcriptPending": "لسا ما فيه تفريغ — بيظهر هنا أول ما تخلص المعالجة",
+
+  "analysisTasks": "مهام",
+  "analysisGoals": "أهداف",
+  "analysisIdeas": "أفكار",
+  "analysisTopics": "مواضيع",
+  "analysisEmpty": "ما فيه شي نستخرجه من هذا التسجيل",
+  "mindMapTitle": "الخريطة الذهنية",
+  "mindMapOpen": "عرض الخريطة الذهنية",
+  "mindMapEmpty": "ما فيه شي نرسمه بعد — الخريطة تظهر أول ما يتنظّم هذا التسجيل",
+  "mindMapRecordingNode": "التسجيل",
+
+  "analysisPending": "جارِ تنظيم الفكرة…",
+
+  "a11yStartRecording": "بدء التسجيل",
+  "a11yStopRecording": "إيقاف التسجيل",
+  "a11yPlayRecording": "تشغيل التسجيل",
+  "a11yPauseRecording": "إيقاف التشغيل مؤقتًا"
+}
