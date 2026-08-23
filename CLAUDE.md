@@ -87,8 +87,11 @@ replace it with `usesCleartextTraffic="true"`; that opens HTTP to every host.
   `'Mindrop'` (a mark, never translated) and `MaterialLocalizations.of(context)`
   strings such as `backButtonTooltip`, already translated by Flutter.
 - Generated `lib/l10n/app_localizations*.dart` are **committed but never
-  hand-edited** — change the ARB and regenerate. `flutter pub get` / `flutter run`
-  regenerate automatically; there is no separate codegen step.
+  hand-edited** — change the ARB and regenerate. `flutter run` regenerates;
+  **`flutter analyze` does not** — it will report the new key as `undefined_getter`
+  on a perfectly correct ARB. Run `flutter gen-l10n` after editing an ARB and
+  before trusting analyze. (Corrects an earlier claim here that any `pub get`
+  regenerates; it doesn't reliably.)
 - Arabic plurals need all six ICU forms (`zero/one/two/few/many/other`).
   `pendingUploads` is the only one today; [widget_test.dart:69](test/widget_test.dart:69)
   fails if someone collapses it to `other`.
@@ -114,8 +117,9 @@ User content = transcripts, extracted tasks/goals/ideas/topics, mind-map node la
   `TextPainter` requires an explicit `textDirection` every time, and inherits nothing.
 - `TextPainter.width` returns the **layout constraint**, not the rendered text
   width. Two-pass layout is required: lay out at max width → read
-  `maxIntrinsicWidth` → clamp → lay out again. See `layoutRadial` in
-  [mind_map.dart](lib/models/mind_map.dart). Skip it and every node comes out identical width.
+  `maxIntrinsicWidth` → clamp → lay out again. See `buildLabel` inside
+  `layoutOrganic` in [mind_map.dart](lib/models/mind_map.dart). Skip it and every
+  node comes out identical width.
 
 ---
 
@@ -133,8 +137,91 @@ User content = transcripts, extracted tasks/goals/ideas/topics, mind-map node la
   sits on 1–2GB.
 - Measure animation on the real device via SurfaceFlinger present times.
   `dumpsys gfxinfo` returns **0 frames** for Flutter (it draws to its own surface).
+  Three traps, all cost real time before they were pinned down:
+  - The layer that carries frames is the **`(BLAST)` SurfaceView** one, e.g.
+    `<hash> SurfaceView[com.mindrop.mindrop/...MainActivity]@0(BLAST)#<id>`.
+    The `MainActivity$_<n>` layer returns the refresh period and **zero rows**.
+    The `#<id>` suffix changes on every reinstall — discover it, don't hardcode it.
+  - `--latency-clear` **does not clear** on this device. The dump still holds the
+    previous burst, so split on the idle gap and read only the last burst.
+  - A surface idle for ~1s produces a `33/25/25/33` **wake-from-idle ramp** on the
+    next frames. In an aggregate that reads as "20–24% dropped" and is a display
+    artifact, not jank. Keep the pipeline warm (a small swipe immediately before)
+    or the number is meaningless. Always sanity-check raw ordered intervals before
+    believing a percentile.
 - Color is never the only signal — status carries icon + label, mind-map category
   nodes carry an icon *and* a written name.
+
+---
+
+## Mind map
+
+Scope is **per-recording only**, and that is data-driven: at last check only 3
+recordings had analysis, with **zero topics shared** between any two. A
+cross-recording map would draw disconnected islands. `MindMapGraph` is already
+generic, so adding one later = a new builder + a new layout function, with no
+change to the painter, gestures, or direction handling. Don't silently lift the
+scope while working in here.
+
+`CustomPainter` + `InteractiveViewer`, `layoutOrganic` — **deterministic by
+construction**. Even the organic node wobble is seeded from the node id, so the
+same input draws the same shape every run. No physics simulation: the graph is
+~17 nodes, and force-directed would add per-run variation and per-frame cost to
+solve a problem that doesn't exist.
+
+- Zero `BackdropFilter` on the canvas — **and no `MaskFilter.blur` either**. The
+  selection halo is stacked solid rings at falling alpha: near-identical look,
+  zero filter cost. The detail card is a solid `Container` for the same reason —
+  it sits above a canvas that repaints.
+- Text layout and branch ribbons are precomputed. Ribbons are rebuilt per frame
+  **only** while the entrance animation runs, because that is the only time their
+  endpoints move.
+- `GestureDetector` is nested **inside** `InteractiveViewer`, so `localPosition`
+  already arrives in canvas coordinates — no manual matrix inversion.
+
+### Three levels — shape carries them, not size
+
+The first version placed all three rings correctly (radius 0 / 190 / 340+) but
+drew them as the *same* rounded rect: corner radius 18 vs 14, font 14 / 12.5 / 13,
+stroke 1.4 / 1.4 / 1.0. Structurally three levels, visually two. Hierarchy now
+rides on shape — blob (root) → smaller blob with icon + count (category) →
+text-width capsule (item). Size alone was tried and was not enough.
+
+Each layout rule fixes a real failure:
+
+- **Sector ∝ item count, with a `_minShare` floor.** Pure proportion gave a
+  1-task branch 21° beside an 8-idea branch, so its item read as the neighbour's.
+- **Radial push-apart after angular placement.** Arc length comes from a fixed
+  angle; capsule width comes from user text. A long sentence is ~182pt wide in a
+  ~95pt slot — two Ideas capsules literally overlapped. Deterministic push, no simulation.
+- **Vertical stretch applied *after* placement**, from measured canvas aspect vs
+  viewport. Radial layout yields a ~1:1 canvas in a ~1:1.9 viewport, so width
+  always binds and the screen's top and bottom stay empty at any scale. It must be
+  after, because final width depends on text measurement.
+- **Fit allows scale up to 1.9**, not `min(1.0, …)`. A 3-node map at natural size
+  in a large empty screen reads as something that failed to load; letting it grow
+  makes a sparse result look deliberate.
+
+### Measured (profile build, 120Hz, 17 nodes / 16 branches)
+
+| Case | median | p99 | dropped |
+|---|---|---|---|
+| Sustained pan | 8.32 ms | 8.32 ms | 1/126 (0.8%) |
+| Selection animation | 8.32 ms | 8.32 ms | **0/122** |
+| Entrance, mid-animation | 8.32 ms | 8.32 ms | 0 over ~87 frames |
+
+Pan is unchanged from the pre-redesign baseline — that is the point: motion was
+added without spending the frame budget.
+
+**One real cost, pre-existing:** opening the screen hitches ~75 ms — first-frame
+layout, dominated by 34 `TextPainter.layout()` calls with Arabic shaping. A/B'd
+against the pre-redesign build at 83.2 / 74.9 / 83.2 ms over three runs, so it is
+not new and is marginally better now. If it ever needs fixing, the target is text
+shaping, not geometry.
+
+**Untested:** two-finger pinch-to-zoom has never been verified with a real
+gesture. `adb` cannot usefully simulate one, and single-touch `input` proves
+nothing about it. Only a human can confirm it — don't claim it works.
 
 ---
 

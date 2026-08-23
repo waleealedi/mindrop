@@ -55,6 +55,8 @@
   "mindMapEmpty": "ما فيه شي نرسمه بعد — الخريطة تظهر أول ما يتنظّم هذا التسجيل",
   "mindMapRecordingNode": "التسجيل",
 
+  "mindMapResetView": "إعادة توسيط الخريطة",
+
   "analysisPending": "جارِ تنظيم الفكرة…",
 
   "a11yStartRecording": "بدء التسجيل",

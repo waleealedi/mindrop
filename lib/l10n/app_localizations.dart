@@ -344,6 +344,12 @@ abstract class AppLocalizations {
   /// **'Recording'**
   String get mindMapRecordingNode;
 
+  /// Tooltip on the mind map header button that returns pan and zoom to the initial fitted view
+  ///
+  /// In en, this message translates to:
+  /// **'Recentre the map'**
+  String get mindMapResetView;
+
   /// Shown on the playback screen while backend analysis is still running
   ///
   /// In en, this message translates to:

@@ -23,6 +23,17 @@ class MindropColors {
   static const neonTeal = Color(0xFF2EE6C5);
   static const neonBlue = Color(0xFF4C8DFF);
 
+  /// اللونان التاليان **موجودان أصلًا** بهوية التطبيق — أشرطة الموجة
+  /// العضوية بشاشة التسجيل ترسمهما حرفيًا منذ البداية. نقلناهما هنا
+  /// كثوابت مسمّاة لما احتاجت الخريطة الذهنية أربع درجات متمايزة لفئاتها
+  /// الأربع (مهام/أهداف/أفكار/مواضيع): الموجود كان يكفي ثلاثة فقط، والرابع
+  /// كان رماديًا يقرأ كعقدة معطّلة لا كفرع له هوية.
+  ///
+  /// إضافة ثابت هنا مو خرقًا لقاعدة «الألوان من MindropColors فقط» — القاعدة
+  /// تمنع اللون الحرفي **داخل الودجت**، وهذا مكانه الصحيح.
+  static const neonLime = Color(0xFF3BE08F);
+  static const neonPink = Color(0xFFFF7A9E);
+
   static const textPrimary = Color(0xFFFFFFFF);
   static const textSecondary = Color(0xFF9A9AA0);
 

@@ -34,30 +34,83 @@ class MindMapScreen extends StatefulWidget {
   State<MindMapScreen> createState() => _MindMapScreenState();
 }
 
-class _MindMapScreenState extends State<MindMapScreen> {
+class _MindMapScreenState extends State<MindMapScreen>
+    with TickerProviderStateMixin {
   final _controller = TransformationController();
+
+  /// أنيميشن الدخول: العقد تنمو من المركز للخارج.
+  ///
+  /// **ليش أنيميشن أصلًا:** الخريطة كانت تظهر كاملة دفعة وحدة، فالمستخدم
+  /// يقابل ١٥ عقدة في إطار واحد بلا أي دليل على الترتيب بينها. النمو من
+  /// المركز يشرح البنية نفسها (تسجيل ← فئة ← عنصر) خلال أقل من ثانية.
+  late final AnimationController _entrance;
+
+  /// إبراز العقدة المحددة وخفوت البقية.
+  late final AnimationController _selection;
+
   MindMapLayout? _layout;
+  Size? _layoutViewport;
+  double? _layoutTextScale;
+
   String? _selectedId;
+
+  /// نبقي آخر تحديد أثناء انعكاس الأنيميشن، وإلا اختفت بطاقة التفاصيل
+  /// فجأة بدل ما تخرج بنعومة.
+  String? _lastSelectedId;
+
   bool _centered = false;
+
+  /// هل حرّك المستخدم العرض عن وضعه الأولي؟ يقرّر ظهور زر إعادة التوسيط.
+  /// `ValueNotifier` مقصود بدل `setState`: التحويل يتغيّر كل إطار أثناء
+  /// السحب، وإعادة بناء الشاشة كلها ٦٠–١٢٠ مرة بالثانية عشان زر واحد هدر.
+  final _transformed = ValueNotifier<bool>(false);
+
+  @override
+  void initState() {
+    super.initState();
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 820),
+    );
+    _selection = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _controller.addListener(_onTransform);
+  }
 
   @override
   void dispose() {
+    _controller.removeListener(_onTransform);
     _controller.dispose();
+    _entrance.dispose();
+    _selection.dispose();
+    _transformed.dispose();
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _buildLayout();
+  void _onTransform() {
+    final m = _controller.value;
+    final moved = (m.getTranslation() - _homeMatrix.getTranslation()).length > 8 ||
+        (m.getMaxScaleOnAxis() - _homeMatrix.getMaxScaleOnAxis()).abs() > 0.02;
+    if (_transformed.value != moved) _transformed.value = moved;
   }
 
-  void _buildLayout() {
+  Matrix4 _homeMatrix = Matrix4.identity();
+
+  // ---------------------------------------------------------------- تخطيط
+
+  /// يبني التخطيط مرة واحدة لكل (مقاس عرض × مقياس نص) — لا مرة كل إطار.
+  MindMapLayout? _layoutFor(Size viewport, double textScale) {
     final analysis = widget.analysis;
-    if (analysis == null || analysis.isEmpty) {
-      _layout = null;
-      return;
+    if (analysis == null || analysis.isEmpty) return null;
+
+    if (_layout != null &&
+        _layoutViewport == viewport &&
+        _layoutTextScale == textScale) {
+      return _layout;
     }
+
     final t = AppLocalizations.of(context)!;
     final graph = buildRecordingGraph(
       recordingId: widget.recordingId,
@@ -68,45 +121,69 @@ class _MindMapScreenState extends State<MindMapScreen> {
       ideasLabel: t.analysisIdeas,
       topicsLabel: t.analysisTopics,
     );
-    // مقياس النص من إعدادات الجهاز يدخل بالحساب: لو كبّر المستخدم الخط،
-    // العقد تكبر معه بدل ما ينقص النص.
-    _layout = layoutRadial(
-      graph,
-      textScale: MediaQuery.textScalerOf(context).scale(1),
-    );
+
+    _layout = layoutOrganic(graph, textScale: textScale, viewport: viewport);
+    _layoutViewport = viewport;
+    _layoutTextScale = textScale;
+    return _layout;
   }
 
   /// يضبط العرض الأولي ليُظهر الخريطة **كاملة** بدل ما يفتح على قصاصة منها.
   ///
-  /// فتحها بمقياس 1 كانت العقد تنقص من الأطراف، فيضيع الشكل العام — وهو
-  /// أهم ما تقدّمه خريطة أصلًا. نحسب مقياسًا يُدخل الكانفس كله بالشاشة
-  /// (وما نكبّر أبعد من 1 لو كانت الخريطة صغيرة) ثم نتوسّط.
+  /// فرقان عن النسخة السابقة، كلاهما ردّ على عيب حقيقي:
+  ///
+  /// - كان السقف `1.0`، فخريطة قليلة المحتوى (عنصر واحد، ٣ عقد) تُرسم
+  ///   بحجمها الطبيعي الصغير وسط شاشة فاضية — تقرأ كشي فشل تحميله. الحين
+  ///   نسمح بالتكبير لـ1.9 فتملأ الحالة القليلة الشاشة وتبان **مقصودة**.
+  /// - نترك هامشًا 6% بدل ما نلصق الحواف بحدود الشاشة.
   void _fitToViewport(Size viewport) {
     if (_centered || _layout == null) return;
     final canvas = _layout!.canvasSize;
     if (viewport.width <= 0 || canvas.width <= 0) return;
 
     final scale = math.min(
-      1.0,
-      math.min(viewport.width / canvas.width, viewport.height / canvas.height),
+      1.9,
+      math.min(viewport.width / canvas.width, viewport.height / canvas.height) *
+          0.94,
     );
     final dx = (viewport.width - canvas.width * scale) / 2;
     final dy = (viewport.height - canvas.height * scale) / 2;
 
-    _controller.value = Matrix4.identity()
+    _homeMatrix = Matrix4.identity()
       ..translateByDouble(dx, dy, 0, 1)
       ..scaleByDouble(scale, scale, 1, 1);
+    _controller.value = _homeMatrix.clone();
     _centered = true;
+
+    if (_entrance.status == AnimationStatus.dismissed) _entrance.forward();
+  }
+
+  void _resetView() {
+    _controller.value = _homeMatrix.clone();
+    setState(() {
+      _selectedId = null;
+    });
+    _selection.reverse();
   }
 
   void _handleTapUp(TapUpDetails d) {
     final hit = _layout?.hitTest(d.localPosition);
+    // الضغط على الفراغ يلغي التحديد — خروج طبيعي بلا زر إضافي.
+    final next = (hit == null || hit.node.id == _selectedId) ? null : hit.node.id;
+
     setState(() {
-      // الضغط على الفراغ يلغي التحديد — خروج طبيعي بلا زر إضافي.
-      _selectedId =
-          (hit == null || hit.node.id == _selectedId) ? null : hit.node.id;
+      if (next != null) _lastSelectedId = next;
+      _selectedId = next;
     });
+
+    if (next == null) {
+      _selection.reverse();
+    } else {
+      _selection.forward();
+    }
   }
+
+  // --------------------------------------------------------------- بناء
 
   @override
   Widget build(BuildContext context) {
@@ -120,14 +197,27 @@ class _MindMapScreenState extends State<MindMapScreen> {
             children: [
               _buildHeader(t),
               Expanded(
-                child: _layout == null
-                    ? _buildEmpty(t)
-                    : Stack(
-                        children: [
-                          _buildCanvas(),
-                          if (_selectedId != null) _buildDetail(t),
-                        ],
-                      ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final viewport =
+                        Size(constraints.maxWidth, constraints.maxHeight);
+                    final textScale = MediaQuery.textScalerOf(context).scale(1);
+                    final layout = _layoutFor(viewport, textScale);
+
+                    if (layout == null) return _buildEmpty(t);
+
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) _fitToViewport(viewport);
+                    });
+
+                    return Stack(
+                      children: [
+                        _buildCanvas(layout),
+                        _buildDetail(t),
+                      ],
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -138,7 +228,7 @@ class _MindMapScreenState extends State<MindMapScreen> {
 
   Widget _buildHeader(AppLocalizations t) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(6, 6, 20, 6),
+      padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
       child: Row(
         children: [
           IconButton(
@@ -159,52 +249,75 @@ class _MindMapScreenState extends State<MindMapScreen> {
               ),
             ),
           ),
+          // يظهر فقط بعد ما يحرّك المستخدم العرض فعلًا — زر بلا وظيفة
+          // حاليّة أسوأ من ما فيه زر (نفس قاعدة "حذف الكل" بشاشة الأفكار).
+          ValueListenableBuilder<bool>(
+            valueListenable: _transformed,
+            builder: (context, moved, _) => AnimatedOpacity(
+              duration: const Duration(milliseconds: 180),
+              opacity: moved ? 1 : 0,
+              child: IgnorePointer(
+                ignoring: !moved,
+                child: IconButton(
+                  onPressed: _resetView,
+                  icon: const Icon(Icons.center_focus_strong_rounded),
+                  iconSize: 21,
+                  color: MindropColors.textSecondary,
+                  tooltip: t.mindMapResetView,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCanvas() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final viewport = Size(constraints.maxWidth, constraints.maxHeight);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _fitToViewport(viewport);
-        });
-
-        return InteractiveViewer(
-          transformationController: _controller,
-          // حدود سخيّة: الخريطة أكبر من الشاشة عادةً، فنسمح بسحبها بحرية.
-          boundaryMargin: const EdgeInsets.all(600),
-          minScale: 0.25,
-          maxScale: 3.0,
-          constrained: false,
-          child: SizedBox(
-            width: _layout!.canvasSize.width,
-            height: _layout!.canvasSize.height,
-            // GestureDetector **داخل** InteractiveViewer عمدًا: التحويل
-            // جزء من شجرة العرض، فإحداثيات `localPosition` تجي محوّلة
-            // أصلًا لفضاء الكانفس. ما نحتاج نعكس المصفوفة يدويًا.
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: _handleTapUp,
-              // RepaintBoundary يخلي السحب يحرّك طبقة مرسومة مسبقًا بدل ما
-              // يعيد رسم الكانفس كل إطار.
-              child: RepaintBoundary(
-                child: CustomPaint(
-                  size: _layout!.canvasSize,
+  Widget _buildCanvas(MindMapLayout layout) {
+    return InteractiveViewer(
+      transformationController: _controller,
+      // حدود سخيّة: الخريطة أكبر من الشاشة عادةً، فنسمح بسحبها بحرية.
+      boundaryMargin: const EdgeInsets.all(600),
+      minScale: 0.25,
+      maxScale: 3.0,
+      constrained: false,
+      child: SizedBox(
+        width: layout.canvasSize.width,
+        height: layout.canvasSize.height,
+        // GestureDetector **داخل** InteractiveViewer عمدًا: التحويل
+        // جزء من شجرة العرض، فإحداثيات `localPosition` تجي محوّلة
+        // أصلًا لفضاء الكانفس. ما نحتاج نعكس المصفوفة يدويًا.
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapUp: _handleTapUp,
+          // RepaintBoundary يخلي السحب يحرّك طبقة مرسومة مسبقًا بدل ما
+          // يعيد رسم الكانفس كل إطار.
+          child: RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: Listenable.merge([_entrance, _selection]),
+              builder: (context, _) {
+                final animating =
+                    _entrance.isAnimating || _selection.isAnimating;
+                return CustomPaint(
+                  size: layout.canvasSize,
                   isComplex: true,
-                  willChange: false,
+                  // أثناء الحركة نخبر المحرك ألا يخزّن الطبقة نقطيًا —
+                  // تخزين طبقة معقّدة يُعاد بناؤها كل إطار خسارة صافية.
+                  // بعد السكون يرجع التخزين وينفع السحب والتكبير.
+                  willChange: animating,
                   painter: MindMapPainter(
-                    layout: _layout!,
+                    layout: layout,
                     selectedId: _selectedId,
+                    entrance: _entrance.value,
+                    selectionT: _selection.value,
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -215,66 +328,85 @@ class _MindMapScreenState extends State<MindMapScreen> {
   /// يفيد — المستخدم جاي **من** التسجيل أصلًا. والتصفية بلا معنى بخريطة
   /// تسجيل واحد.
   Widget _buildDetail(AppLocalizations t) {
-    final node = _layout!.nodeById(_selectedId!);
-    if (node == null) return const SizedBox.shrink();
+    return AnimatedBuilder(
+      animation: _selection,
+      builder: (context, _) {
+        if (_selection.value <= 0.001) return const SizedBox.shrink();
+        final id = _selectedId ?? _lastSelectedId;
+        final node = id == null ? null : _layout?.nodeById(id);
+        if (node == null) return const SizedBox.shrink();
 
-    final label = switch (node.node.kind) {
-      MindMapNodeKind.task => t.analysisTasks,
-      MindMapNodeKind.goal => t.analysisGoals,
-      MindMapNodeKind.idea => t.analysisIdeas,
-      MindMapNodeKind.topic => t.analysisTopics,
-      _ => t.mindMapRecordingNode,
-    };
+        final label = switch (node.node.kind) {
+          MindMapNodeKind.task => t.analysisTasks,
+          MindMapNodeKind.goal => t.analysisGoals,
+          MindMapNodeKind.idea => t.analysisIdeas,
+          MindMapNodeKind.topic => t.analysisTopics,
+          _ => t.mindMapRecordingNode,
+        };
 
-    return Positioned(
-      left: 16,
-      right: 16,
-      bottom: 16,
-      // حاوية مصمتة لا زجاجية: تجلس فوق كانفس يُعاد رسمه، وما نبي
-      // BackdropFilter بهذا المسار.
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF161616).withValues(alpha: 0.96),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: node.color.withValues(alpha: 0.55)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  node.node.kind.icon ?? Icons.notes_rounded,
-                  size: 14,
+        final v = Curves.easeOutCubic.transform(_selection.value);
+
+        return Positioned(
+          left: 16,
+          right: 16,
+          bottom: 16,
+          child: Opacity(
+            opacity: v,
+            child: Transform.translate(
+              offset: Offset(0, (1 - v) * 26),
+              child: _detailCard(node, label),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // حاوية مصمتة لا زجاجية: تجلس فوق كانفس يُعاد رسمه، وما نبي
+  // BackdropFilter بهذا المسار.
+  Widget _detailCard(LaidOutNode node, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161616).withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: node.color.withValues(alpha: 0.55)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(
+                node.node.kind.icon ?? Icons.notes_rounded,
+                size: 14,
+                color: node.color,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
                   color: node.color,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
-                    color: node.color,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // محتوى مستخدم: اتجاهه من نصه هو، مو من لغة الواجهة.
-            TranscriptText(
-              node.node.label,
-              style: const TextStyle(
-                fontSize: 14.5,
-                height: 1.45,
-                fontWeight: FontWeight.w500,
-                color: MindropColors.textPrimary,
               ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // محتوى مستخدم: اتجاهه من نصه هو، مو من لغة الواجهة.
+          TranscriptText(
+            node.node.label,
+            style: const TextStyle(
+              fontSize: 14.5,
+              height: 1.45,
+              fontWeight: FontWeight.w500,
+              color: MindropColors.textPrimary,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

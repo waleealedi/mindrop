@@ -146,6 +146,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mindMapRecordingNode => 'Recording';
 
   @override
+  String get mindMapResetView => 'Recentre the map';
+
+  @override
   String get analysisPending => 'Organising this idea…';
 
   @override

@@ -150,6 +150,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mindMapRecordingNode => 'التسجيل';
 
   @override
+  String get mindMapResetView => 'إعادة توسيط الخريطة';
+
+  @override
   String get analysisPending => 'جارِ تنظيم الفكرة…';
 
   @override

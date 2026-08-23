@@ -86,6 +86,11 @@
   },
   "mindMapRecordingNode": "Recording",
 
+  "mindMapResetView": "Recentre the map",
+  "@mindMapResetView": {
+    "description": "Tooltip on the mind map header button that returns pan and zoom to the initial fitted view"
+  },
+
   "analysisPending": "Organising this idea…",
   "@analysisPending": {
     "description": "Shown on the playback screen while backend analysis is still running"
