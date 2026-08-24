@@ -5,16 +5,20 @@ import 'package:flutter/material.dart';
 import '../models/mind_map.dart';
 import '../theme/app_theme.dart';
 
-/// يرسم الخريطة الذهنية على كانفس واحد.
+/// يرسم الخريطة الذهنية على كانفس واحد — بلغة نظام Stitch «Bio-Digital».
 ///
 /// **ملاحظة أداء مقصودة:** ما فيه أي `BackdropFilter`/زجاج هنا، ولا
 /// `MaskFilter.blur`. الضبابية الحقيقية تعيد قراءة الطبقة اللي خلفها كل
 /// إطار، وكانفس يُعاد رسمه مع كل إصبع على الشاشة هو بالضبط الحالة اللي
-/// وُضعت القاعدة لها. حتى "التوهج" هنا مبني من حلقات مصمتة متدرجة الشفافية
-/// لا من فلتر ضباب — نفس النتيجة البصرية تقريبًا بتكلفة صفر.
+/// وُضعت القاعدة لها.
+///
+/// **انحراف مقصود عن Stitch:** تصديره يحدّد `backdrop-blur-md` على كل عقدة
+/// و`blur-xl` على هالة الجذر. أخذنا النتيجة البصرية (سطح شبه شفاف + حد رفيع
+/// + توهج) وتركنا الآلية: التعبئة لون مصمت بشفافية، والتوهج حلقات متدرّجة
+/// الشفافية بدل فلتر ضباب. القاعدة أقدم من هذا التصدير وسببها قياس حقيقي.
 ///
 /// كل تخطيط النصوص محسوب مسبقًا داخل [LaidOutNode]، فالرسم نفسه ما فيه
-/// قياس نص إطلاقًا. الأغصان كذلك محضّرة مسبقًا، ولا يُعاد بناؤها إلا أثناء
+/// قياس نص إطلاقًا. الوصلات كذلك محضّرة مسبقًا، ولا يُعاد بناؤها إلا أثناء
 /// أنيميشن الدخول وحده — لأن طرفيها يتحركان وقتها فعلًا.
 class MindMapPainter extends CustomPainter {
   MindMapPainter({
@@ -36,6 +40,10 @@ class MindMapPainter extends CustomPainter {
   /// نافذة ظهور العقدة الواحدة داخل زمن الأنيميشن الكلي. أقصر من 1 عشان
   /// العقد تتتابع (stagger) بدل ما تظهر كلها مع بعض.
   static const _window = 0.45;
+
+  /// سماكة الوصلة. Stitch يرسمها `stroke-width="3"` على كانفس عريض؛ 2.6
+  /// يعطي نفس الوزن البصري على كانفس جوال.
+  static const _edgeWidth = 2.6;
 
   bool get _entering => entrance < 1;
 
@@ -75,7 +83,7 @@ class MindMapPainter extends CustomPainter {
     return related.contains(id) ? 1.0 : 1.0 - 0.62 * selectionT;
   }
 
-  // ------------------------------------------------------------------ أغصان
+  // ----------------------------------------------------------------- وصلات
 
   void _paintEdges(Canvas canvas, Set<String>? related) {
     for (final e in layout.edges) {
@@ -87,36 +95,44 @@ class MindMapPainter extends CustomPainter {
       if (t <= 0) continue;
 
       final eased = Curves.easeOutCubic.transform(t);
-      final highlighted =
-          related != null && related.contains(e.fromId) && related.contains(e.toId);
+      final highlighted = related != null &&
+          related.contains(e.fromId) &&
+          related.contains(e.toId);
       final dim = math.min(_dimFor(e.fromId, related), _dimFor(e.toId, related));
 
       final Path path;
+      var scale = 1.0;
       if (_entering) {
         // الطرفان يتحركان أثناء الدخول، فالمسار المحضّر ما ينفع — نبنيه
         // من المواضع الحالية ونقصّه عند نسبة النمو نفسها.
-        final a = _centerOf(from, Curves.easeOutCubic.transform(
-          _progressFor(from.entranceStart),
-        ));
+        final fromEased =
+            Curves.easeOutCubic.transform(_progressFor(from.entranceStart));
+        final a = _centerOf(from, fromEased);
         final b = _centerOf(to, eased);
-        final sFrom = 0.32 + 0.68 * Curves.easeOutCubic.transform(
-          _progressFor(from.entranceStart),
-        );
+        final sFrom = 0.32 + 0.68 * fromEased;
+        final sTo = 0.32 + 0.68 * eased;
+        scale = sTo;
         path = branchPath(
           a,
-          from.radius * sFrom,
+          from.insetAlong(b - a) * sFrom,
           b,
-          to.radius * (0.32 + 0.68 * eased),
+          to.insetAlong(a - b) * sTo,
           t: eased,
         );
       } else {
         path = e.path;
       }
 
-      final alpha = (highlighted ? 0.72 : 0.30) * eased * dim;
+      // شفافية 60% هي قيمة Stitch (`class="opacity-60"`)؛ نرفعها للمسار
+      // المحدَّد وننزلها للمخفوت.
+      final alpha = (highlighted ? 0.92 : 0.55) * eased * dim;
       canvas.drawPath(
         path,
-        Paint()..color = e.color.withValues(alpha: alpha.clamp(0.0, 1.0)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _edgeWidth * scale
+          ..strokeCap = StrokeCap.round
+          ..color = e.color.withValues(alpha: alpha.clamp(0.0, 1.0)),
       );
     }
   }
@@ -141,150 +157,146 @@ class MindMapPainter extends CustomPainter {
     canvas.translate(center.dx, center.dy);
     canvas.scale(scale);
 
-    switch (n.level) {
-      case MindMapLevel.root:
-        _paintRoot(canvas, n, fade, selected);
-      case MindMapLevel.category:
-        _paintCategory(canvas, n, fade, selected);
-      case MindMapLevel.item:
-        _paintItem(canvas, n, fade, selected);
-    }
+    _paintSurface(canvas, n, fade, selected);
 
     // النص يظهر متأخرًا عن الشكل: نص بمقاس 0.4 يطلع ملطّخًا، فما فيه فايدة
     // من إظهاره قبل ما تقرب العقدة حجمها النهائي.
-    final textFade =
-        (((t - 0.45) / 0.55).clamp(0.0, 1.0)) * dim;
+    final textFade = (((t - 0.45) / 0.55).clamp(0.0, 1.0)) * dim;
     if (textFade > 0.01) _paintContent(canvas, n, textFade);
 
     canvas.restore();
   }
 
-  /// توهج مبني من حلقات مصمتة — بديل `MaskFilter.blur` بتكلفة صفر.
+  /// خلفية العقدة وحدّها.
+  ///
+  /// القيم من تصدير Stitch: تعبئة `surface-container`، حد بلون الفرع عند
+  /// نسبة منخفضة للعناصر، وحد **أبيض 10%** للجذر (`border-white/10`) —
+  /// الجذر وحده يعتمد على التوهج النيلي لا على لون حدّه.
+  void _paintSurface(Canvas canvas, LaidOutNode n, double fade, bool selected) {
+    final isRoot = n.level == MindMapLevel.root;
+    final isCategory = n.level == MindMapLevel.category;
+
+    if (isRoot) {
+      _paintHalo(canvas, n.shape, n.color, fade * (selected ? 2.6 : 1.9));
+    } else if (selected) {
+      _paintHalo(canvas, n.shape, n.color, fade * 1.3);
+    }
+
+    // طبقة معتمة أولًا: الوصلات تمر تحت الكبسولات، ولولاها بانت من خلفها.
+    canvas.drawPath(
+      n.shape,
+      Paint()
+        ..color = MindropColors.background
+            .withValues(alpha: (0.94 * fade).clamp(0.0, 1.0)),
+    );
+    canvas.drawPath(
+      n.shape,
+      Paint()
+        ..color = MindropColors.stitchSurfaceContainer.withValues(
+          alpha: ((selected ? 0.98 : 0.86) * fade).clamp(0.0, 1.0),
+        ),
+    );
+
+    final Color borderColor;
+    final double borderAlpha;
+    if (isRoot) {
+      borderColor = Colors.white;
+      borderAlpha = selected ? 0.34 : 0.16;
+    } else {
+      borderColor = n.color;
+      borderAlpha = selected ? 1.0 : (isCategory ? 0.62 : 0.34);
+    }
+
+    canvas.drawPath(
+      n.shape,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isCategory ? 1.5 : (isRoot ? 1.5 : 1.1)
+        ..color =
+            borderColor.withValues(alpha: (borderAlpha * fade).clamp(0.0, 1.0)),
+    );
+  }
+
+  /// توهج مبني من حلقات مصمتة — بديل `blur` بتكلفة صفر.
   void _paintHalo(Canvas canvas, Path shape, Color color, double strength) {
     if (strength <= 0.01) return;
     for (var i = 3; i >= 1; i--) {
-      final s = 1 + i * 0.13;
+      final s = 1 + i * 0.12;
       canvas.save();
       canvas.scale(s);
       canvas.drawPath(
         shape,
         Paint()
           ..color = color.withValues(
-            alpha: (strength * 0.09 / i).clamp(0.0, 1.0),
+            alpha: (strength * 0.085 / i).clamp(0.0, 1.0),
           ),
       );
       canvas.restore();
     }
   }
 
-  void _paintRoot(Canvas canvas, LaidOutNode n, double fade, bool selected) {
-    _paintHalo(canvas, n.shape, n.color, fade * (selected ? 1.6 : 1.0));
-
-    // تعبئة معتمة أولًا ثم صبغة اللون فوقها.
-    //
-    // كانت التعبئة لونًا واحدًا بشفافية 0.20، فالأغصان اللي تبدأ **داخل**
-    // حدود الجذر تبان من تحته كأشكال زاويّة داكنة تشوّه الكتلة. الطبقة
-    // المعتمة تحجبها، والصبغة فوقها تحافظ على التوهج البرتقالي.
-    canvas.drawPath(
-      n.shape,
-      Paint()
-        ..color = MindropColors.background
-            .withValues(alpha: (0.96 * fade).clamp(0.0, 1.0)),
-    );
-    canvas.drawPath(
-      n.shape,
-      Paint()..color = n.color.withValues(alpha: 0.26 * fade),
-    );
-    canvas.drawPath(
-      n.shape,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.4
-        ..color = n.color.withValues(alpha: (0.95 * fade).clamp(0.0, 1.0)),
-    );
-  }
-
-  void _paintCategory(Canvas canvas, LaidOutNode n, double fade, bool selected) {
-    if (selected) _paintHalo(canvas, n.shape, n.color, fade * 1.4);
-
-    // نفس سبب الجذر: طبقة معتمة تحجب الأغصان المارّة تحت الكتلة.
-    canvas.drawPath(
-      n.shape,
-      Paint()
-        ..color = MindropColors.background
-            .withValues(alpha: (0.95 * fade).clamp(0.0, 1.0)),
-    );
-    canvas.drawPath(
-      n.shape,
-      Paint()
-        ..color = MindropColors.glass
-            .withValues(alpha: ((selected ? 0.92 : 0.74) * fade).clamp(0.0, 1.0)),
-    );
-    canvas.drawPath(
-      n.shape,
-      Paint()..color = n.color.withValues(alpha: 0.16 * fade),
-    );
-    canvas.drawPath(
-      n.shape,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = selected ? 2.2 : 1.6
-        ..color = n.color.withValues(alpha: (0.85 * fade).clamp(0.0, 1.0)),
-    );
-  }
-
-  void _paintItem(Canvas canvas, LaidOutNode n, double fade, bool selected) {
-    if (selected) _paintHalo(canvas, n.shape, n.color, fade * 1.2);
-
-    canvas.drawPath(
-      n.shape,
-      Paint()
-        ..color = MindropColors.glass
-            .withValues(alpha: ((selected ? 0.94 : 0.66) * fade).clamp(0.0, 1.0)),
-    );
-    canvas.drawPath(
-      n.shape,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = selected ? 1.8 : 1.0
-        ..color = n.color.withValues(
-          alpha: ((selected ? 0.95 : 0.42) * fade).clamp(0.0, 1.0),
-        ),
-    );
-  }
-
   // ------------------------------------------------------------ محتوى العقدة
 
   /// المحتوى يُرسم بإحداثيات محلية حول (0,0) — نفس فضاء [LaidOutNode.shape].
+  ///
+  /// كل المستويات صف أفقي واحد، بنفس ترتيب المقاسات المحجوزة وقت التخطيط:
+  ///   الجذر  : أيقونة + نص
+  ///   الفئة  : أيقونة + نص + عدّاد
+  ///   العنصر : نقطة + نص
   void _paintContent(Canvas canvas, LaidOutNode n, double fade) {
-    switch (n.level) {
-      case MindMapLevel.item:
-        // كبسولة: النص وحده، متمركزًا.
-        _paintPainter(canvas, n.textPainter,
-            Offset(-n.textPainter.width / 2, -n.textPainter.height / 2), fade);
+    final icon = n.iconPainter;
+    final count = n.countPainter;
+    final text = n.textPainter;
 
-      case MindMapLevel.root:
-      case MindMapLevel.category:
-        // كتلة: عمود من أيقونة ← نص ← عدّاد (للفئة فقط).
-        final icon = n.iconPainter;
-        final count = n.countPainter;
-        final gap = 4.0;
+    final iconW = icon == null ? 0.0 : icon.width + kNodeGlyphGap;
+    final countW = count == null ? 0.0 : count.width + kNodeGlyphGap;
+    final dotW = n.showDot ? kNodeDotSize + kNodeDotGap : 0.0;
 
-        var total = n.textPainter.height;
-        if (icon != null) total += icon.height + gap;
-        if (count != null) total += count.height + gap * 0.5;
+    final contentW = iconW + dotW + text.width + countW;
+    var x = -contentW / 2;
 
-        var y = -total / 2;
-        if (icon != null) {
-          _paintPainter(canvas, icon, Offset(-icon.width / 2, y), fade);
-          y += icon.height + gap;
-        }
-        _paintPainter(canvas, n.textPainter,
-            Offset(-n.textPainter.width / 2, y), fade);
-        y += n.textPainter.height + gap * 0.5;
-        if (count != null) {
-          _paintPainter(canvas, count, Offset(-count.width / 2, y), fade * 0.85);
-        }
+    void paintLeadingGlyph() {
+      if (icon != null) {
+        _paintPainter(canvas, icon, Offset(x, -icon.height / 2), fade);
+        x += iconW;
+      }
+      if (n.showDot) {
+        final cx = x + kNodeDotSize / 2;
+        // هالة صغيرة حول النقطة — مقابل `shadow-[0_0_10px_rgba(...,0.6)]`
+        // عند Stitch، بحلقة مصمتة بدل ظل مضبّب.
+        canvas.drawCircle(
+          Offset(cx, 0),
+          kNodeDotSize / 2 + 2.5,
+          Paint()..color = n.color.withValues(alpha: 0.22 * fade),
+        );
+        canvas.drawCircle(
+          Offset(cx, 0),
+          kNodeDotSize / 2,
+          Paint()..color = n.color.withValues(alpha: fade.clamp(0.0, 1.0)),
+        );
+        x += dotW;
+      }
+    }
+
+    // الرمز المتصدّر (أيقونة أو نقطة) يسبق النص، و"يسبق" بالعربي = يمين.
+    // فنقلب ترتيب الصف كاملًا للعقد العربية بدل ما نترك النقطة بجهة نهاية
+    // القراءة — نفس منطق [TranscriptText]، مطبَّقًا على تخطيط لا على نص.
+    if (!n.isRtl) {
+      paintLeadingGlyph();
+      _paintPainter(canvas, text, Offset(x, -text.height / 2), fade);
+      x += text.width;
+      if (count != null) {
+        x += kNodeGlyphGap;
+        _paintPainter(canvas, count, Offset(x, -count.height / 2), fade * 0.9);
+      }
+    } else {
+      if (count != null) {
+        _paintPainter(canvas, count, Offset(x, -count.height / 2), fade * 0.9);
+        x += count.width + kNodeGlyphGap;
+      }
+      _paintPainter(canvas, text, Offset(x, -text.height / 2), fade);
+      x += text.width;
+      paintLeadingGlyph();
     }
   }
 

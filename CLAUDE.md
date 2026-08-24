@@ -95,6 +95,15 @@ replace it with `usesCleartextTraffic="true"`; that opens HTTP to every host.
 - Arabic plurals need all six ICU forms (`zero/one/two/few/many/other`).
   `pendingUploads` is the only one today; [widget_test.dart:69](test/widget_test.dart:69)
   fails if someone collapses it to `other`.
+- **Fonts are dual-script**: Geist (Latin) with IBM Plex Sans Arabic as
+  `fontFamilyFallback`, both via `google_fonts`, defined once in `MindropFonts`.
+  Geist has no Arabic glyphs, so the engine picks per-character — a mixed
+  Arabic/English sentence renders each script in its own face with no switching
+  logic. Source: the Stitch export's type spec.
+- **`TextPainter` inherits no font.** Inside a `CustomPainter` there is no theme,
+  so a `TextStyle` without an explicit `fontFamily` silently renders in the
+  platform default, not the brand face. This was live for the whole mind map
+  before it was caught. Build painter styles with `MindropFonts.style(...)`.
 - **Always** `import 'package:intl/intl.dart' show DateFormat;` (or `show Bidi;`).
   A bare import shadows Flutter's `TextDirection` with intl's own class. Extend
   the `show` list; never drop it.
@@ -170,22 +179,44 @@ same input draws the same shape every run. No physics simulation: the graph is
 solve a problem that doesn't exist.
 
 - Zero `BackdropFilter` on the canvas — **and no `MaskFilter.blur` either**. The
-  selection halo is stacked solid rings at falling alpha: near-identical look,
-  zero filter cost. The detail card is a solid `Container` for the same reason —
-  it sits above a canvas that repaints.
+  halos are stacked solid rings at falling alpha: near-identical look, zero
+  filter cost. The detail card is a solid `Container` for the same reason — it
+  sits above a canvas that repaints. **This is a deliberate deviation from the
+  Stitch export**, which specifies `backdrop-blur-md` on every node and
+  `blur-xl` on the root halo. We took the result (translucent surface, hairline
+  border, glow) and rejected the mechanism. The rule predates the export and is
+  backed by measurement; the export is not.
 - Text layout and branch ribbons are precomputed. Ribbons are rebuilt per frame
   **only** while the entrance animation runs, because that is the only time their
   endpoints move.
 - `GestureDetector` is nested **inside** `InteractiveViewer`, so `localPosition`
   already arrives in canvas coordinates — no manual matrix inversion.
 
-### Three levels — shape carries them, not size
+### Visual language comes from the Stitch export
 
-The first version placed all three rings correctly (radius 0 / 190 / 340+) but
-drew them as the *same* rounded rect: corner radius 18 vs 14, font 14 / 12.5 / 13,
-stroke 1.4 / 1.4 / 1.0. Structurally three levels, visually two. Hierarchy now
-rides on shape — blob (root) → smaller blob with icon + count (category) →
-text-width capsule (item). Size alone was tried and was not enough.
+`bio_digital_organic_system/DESIGN.md` + `mind_map_screen/code.html`. Tokens live
+in `MindropColors` under the `stitch*` prefix, named after the Material roles the
+export ships so the mapping stays traceable.
+
+- **All three levels are pills.** Round 1 used deterministic wobbly "blobs" for
+  root and category. The export states one shape language — `rounded-full` for
+  nodes, `rounded-[3rem]` for the root — so the wobble is gone. A half-organic
+  shape isn't a compromise, it's just an undecided one.
+- **Connectors are stroked splines**, not tapered filled ribbons: the export
+  draws `<path stroke-width="3" fill="none">` at 60% opacity. Cheaper too — one
+  path instead of 26 computed edge points.
+- **Hierarchy without shape variety**: size, weight, border alpha, and the
+  leading glyph. Root = white-10% border + indigo halo (its colour token is the
+  *glow*, not the border). Category = accent border + icon + count. Item = accent
+  border + colour dot.
+- **The dot follows text direction.** "Leading" is the right side in Arabic, so
+  the whole content row flips for RTL nodes — same principle as
+  `transcript_text.dart`, applied to layout instead of text.
+- **Four categories, three accent hues.** The export ships secondary/tertiary/
+  primary and cycles them. `primary-container` was tried as the fourth and failed
+  on real data: a recording with only ideas + topics — a common shape — rendered
+  effectively monochrome. Topics now use the export's `error` role (coral) purely
+  as a fourth accent, with no error semantics attached.
 
 Each layout rule fixes a real failure:
 
@@ -203,6 +234,10 @@ Each layout rule fixes a real failure:
   makes a sparse result look deliberate.
 
 ### Measured (profile build, 120Hz, 17 nodes / 16 branches)
+
+⚠️ These numbers are from the **round-1 paint path** (blob spline fills + tapered
+ribbon fills). The Stitch pass changed paint work — stroked paths, pill RRects,
+dot circles — so they are indicative, not current. Re-measure before quoting.
 
 | Case | median | p99 | dropped |
 |---|---|---|---|

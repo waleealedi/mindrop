@@ -30,18 +30,23 @@ extension MindMapNodeKindStyle on MindMapNodeKind {
         _ => MindMapLevel.item,
       };
 
-  /// اللون من [MindropColors] حصرًا.
+  /// اللون من [MindropColors] حصرًا — أدوار نظام Stitch «Bio-Digital».
   ///
-  /// أربع درجات متمايزة للفئات الأربع، ودرجة خامسة للمركز. `topic` كان
-  /// رماديًا (`textSecondary`) فيقرأ كعقدة معطّلة بدل فرع له هوية، و`goal`
-  /// كان يشارك المركز نفس البرتقالي فينمحي الفرق بين «الجذر» و«فرع».
+  /// Stitch يدوّر **ثلاث** درجات على العقد (secondary/tertiary/primary)
+  /// ويترك الجذر بلا لون حد: حدّه أبيض 10% وتوهجه نيلي. عندنا أربع فئات
+  /// ثابتة، فناخذ الثلاث كما هي ونضيف `primary-container` النيلي للرابعة —
+  /// وهو نفس اللون اللي يتوهج به الجذر، فما نخترع درجة خارج النظام.
+  ///
+  /// `primary` (#C0C1FF) و`primary-container` (#8083FF) من عائلة واحدة لكن
+  /// تشبّعهما مختلف بوضوح، وكل فرع يحمل أيقونته واسمه المكتوب فوق ذلك —
+  /// فاللون ما هو الإشارة الوحيدة أبدًا.
   Color get color => switch (this) {
-        MindMapNodeKind.recording => MindropColors.accent,
-        MindMapNodeKind.task => MindropColors.neonTeal,
-        MindMapNodeKind.goal => MindropColors.neonLime,
-        MindMapNodeKind.idea => MindropColors.neonBlue,
-        MindMapNodeKind.topic => MindropColors.neonPink,
-        MindMapNodeKind.category => MindropColors.textSecondary,
+        MindMapNodeKind.recording => MindropColors.stitchPrimaryContainer,
+        MindMapNodeKind.task => MindropColors.stitchSecondary,
+        MindMapNodeKind.goal => MindropColors.stitchTertiary,
+        MindMapNodeKind.idea => MindropColors.stitchPrimary,
+        MindMapNodeKind.topic => MindropColors.stitchError,
+        MindMapNodeKind.category => MindropColors.stitchOnSurfaceVariant,
       };
 
   /// أيقونة مميّزة لكل فئة.
@@ -159,73 +164,43 @@ MindMapGraph buildRecordingGraph({
 }
 
 // ---------------------------------------------------------------------------
-// أشكال عضوية
+// أشكال Stitch
 // ---------------------------------------------------------------------------
 
-/// كتلة عضوية: دائرة مشوّهة تشويهًا خفيفًا **حتميًا** (البذرة من معرّف
-/// العقدة)، فنفس العقدة تطلع بنفس الشكل بالضبط كل تشغيل.
+/// كبسولة: مستطيل بنصف قطر = نصف الارتفاع.
 ///
-/// ليش مو دائرة مضبوطة: الدوائر المتطابقة تقرأ كمخطط بيانات. وليش مو
-/// عشوائية وقت الرسم: أي عشوائية تعني شكلًا يتغيّر بين إطار وإطار، وتكسر
-/// `shouldRepaint` كمرجع للمقارنة.
-Path organicBlobPath(double radius, int seed) {
-  const points = 7; // فردي: يمنع التماثل المرآتي اللي يرجّع إحساس الدائرة
-  final phase = (seed % 360) * math.pi / 180;
-  final ring = <Offset>[];
-
-  for (var i = 0; i < points; i++) {
-    final a = (i / points) * 2 * math.pi;
-    // موجتان بترددين غير متناسبين — نفس حيلة أشرطة الموجة بشاشة التسجيل:
-    // ما ترجع لنفس الوضع بشكل دوري ملحوظ.
-    final wobble =
-        0.055 * math.sin(a * 3 + phase) + 0.032 * math.cos(a * 2 - phase * 1.7);
-    final r = radius * (1 + wobble);
-    ring.add(Offset(math.cos(a) * r, math.sin(a) * r));
-  }
-
-  return _closedSpline(ring);
-}
-
-/// كبسولة العنصر: مستطيل بنصف قطر = نصف الارتفاع (شكل حبّة دواء).
+/// **تغيّر عن الجولة السابقة:** كانت العقد العليا "كتلًا عضوية" (دائرة
+/// مشوّهة بتشويه حتمي مبذور من معرّف العقدة). تصدير Stitch يحدّد لغة شكلية
+/// واحدة صراحةً — `rounded-full` للعقد و`rounded-[3rem]` للجذر — يعني
+/// كبسولات نظيفة لا كتلًا متموّجة. حذفنا التموّج بدل ما نخلطه بالاثنين:
+/// شكل نصف-عضوي ما هو تسوية، هو مجرد شكل غير محسوم.
 ///
-/// ليش كبسولة مو دائرة للعناصر: نص العنصر جملة كاملة من كلام المستخدم، مو
-/// وسمًا من كلمتين مثل المراجع البصرية. دائرة بقد جملة تصير ضخمة وتاكل
-/// الكانفس؛ الكبسولة تاخذ عرض نصّها بالضبط وتبقى الشكل الأنعم بعد الدائرة.
-Path capsulePath(Size size) {
+/// الطابع العضوي بقي حيث يحدّده Stitch فعلًا — بالمنحنيات الواصلة
+/// (`Connectors: curved paths (splines), never straight`) وبالتخطيط الشعاعي.
+Path pillPath(Size size, {double? radius}) {
   final rect = Rect.fromCenter(
     center: Offset.zero,
     width: size.width,
     height: size.height,
   );
+  final r = radius ?? size.height / 2;
   return Path()
-    ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(size.height / 2)));
+    ..addRRect(RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(math.min(r, size.height / 2)),
+    ));
 }
 
-/// يمرّر منحنى مغلقًا ناعمًا (Catmull-Rom محوّل لبيزييه تكعيبي) على نقاط.
-Path _closedSpline(List<Offset> p) {
-  final n = p.length;
-  final path = Path()..moveTo(p[0].dx, p[0].dy);
-  for (var i = 0; i < n; i++) {
-    final p0 = p[(i - 1 + n) % n];
-    final p1 = p[i];
-    final p2 = p[(i + 1) % n];
-    final p3 = p[(i + 2) % n];
-    final c1 = p1 + (p2 - p0) / 6;
-    final c2 = p2 - (p3 - p1) / 6;
-    path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
-  }
-  return path..close();
-}
-
-/// غصن متناقص السماكة بين عقدتين: عريض عند الأب، يرفّع لطرف رفيع عند
-/// الابن — نفس لغة "الذيل" بالمراجع البصرية.
+/// منحنى واصل بين عقدتين — خط مرسوم بسماكة ثابتة، لا شكل مملوء.
 ///
-/// **ليش شكل مملوء مو خطًا بسماكة ثابتة:** الخط الثابت يقرأ كسلك بمخطط
-/// شبكة. التناقص وحده هو اللي يعطي اتجاهًا بصريًا (من الأب للابن) بدون أي
-/// سهم أو زخرفة.
+/// **تغيّر عن الجولة السابقة:** كان "غصنًا" متناقص السماكة (شكل مملوء من
+/// حافتين). Stitch يرسمها `<path stroke-width="3" fill="none">` بتدرّج
+/// لوني وشفافية 60% — خط رفيع منتظم. الخط الواحد أرخص أيضًا: مسار واحد
+/// بدل ٢٦ نقطة محسوبة لكل حافة.
 ///
-/// [t] يقصّ الغصن عند نسبة من طوله — تحتاجه أنيميشن الدخول عشان الأغصان
-/// تنمو للخارج مع العقد بدل ما تظهر كاملة فجأة.
+/// [t] يقصّ المنحنى عند نسبة من طوله — يحتاجه أنيميشن الدخول عشان الوصلات
+/// تنمو للخارج مع العقد بدل ما تظهر كاملة فجأة. نقتطع بإعادة تقسيم بيزييه
+/// (De Casteljau) فيبقى الشكل مطابقًا للأصل تمامًا على أي نسبة.
 Path branchPath(
   Offset from,
   double fromRadius,
@@ -238,57 +213,33 @@ Path branchPath(
   if (dist < 1) return Path();
 
   final dir = delta / dist;
-  // ندخل قليلًا داخل حدود العقدتين عشان الغصن يندمج بالكتلة بدل ما يلمسها.
-  final a = from + dir * (fromRadius * 0.86);
-  final b = to - dir * (toRadius * 0.80);
+  // نبدأ من حافة العقدة لا من مركزها، فالخط ما يمر تحت الكبسولة.
+  final a = from + dir * (fromRadius * 0.92);
+  final b = to - dir * (toRadius * 0.92);
 
   final perp = Offset(-dir.dy, dir.dx);
   final bow = dist * 0.13;
   final c1 = a + (b - a) * 0.36 + perp * bow;
   final c2 = a + (b - a) * 0.72 + perp * (bow * 0.5);
 
-  final wA = math.min(fromRadius * 0.30, 15.0);
-  final wB = math.max(toRadius * 0.13, 1.6);
-
-  const steps = 13;
   final end = t.clamp(0.0, 1.0);
-  final upper = <Offset>[];
-  final lower = <Offset>[];
-
-  for (var i = 0; i <= steps; i++) {
-    final s = (i / steps) * end;
-    final p = _cubic(a, c1, c2, b, s);
-    final tangent = _cubicTangent(a, c1, c2, b, s);
-    final len = tangent.distance;
-    final nrm = len < 0.001 ? perp : Offset(-tangent.dy, tangent.dx) / len;
-    // تناقص أُسّي: يبقى سميكًا قرب الأب ثم ينهار بسرعة — لو خلّيناه خطيًا
-    // طلع مثلثًا هندسيًا بدل ذيل عضوي.
-    final w = wB + (wA - wB) * math.pow(1 - s, 1.9).toDouble();
-    upper.add(p + nrm * w);
-    lower.add(p - nrm * w);
+  if (end >= 1.0) {
+    return Path()
+      ..moveTo(a.dx, a.dy)
+      ..cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, b.dx, b.dy);
   }
 
-  final path = Path()..moveTo(upper.first.dx, upper.first.dy);
-  for (final o in upper.skip(1)) {
-    path.lineTo(o.dx, o.dy);
-  }
-  for (final o in lower.reversed) {
-    path.lineTo(o.dx, o.dy);
-  }
-  return path..close();
-}
+  // De Casteljau: النصف الأول من المنحنى عند النسبة `end`.
+  final p01 = Offset.lerp(a, c1, end)!;
+  final p12 = Offset.lerp(c1, c2, end)!;
+  final p23 = Offset.lerp(c2, b, end)!;
+  final p012 = Offset.lerp(p01, p12, end)!;
+  final p123 = Offset.lerp(p12, p23, end)!;
+  final tip = Offset.lerp(p012, p123, end)!;
 
-Offset _cubic(Offset a, Offset b, Offset c, Offset d, double t) {
-  final u = 1 - t;
-  return a * (u * u * u) +
-      b * (3 * u * u * t) +
-      c * (3 * u * t * t) +
-      d * (t * t * t);
-}
-
-Offset _cubicTangent(Offset a, Offset b, Offset c, Offset d, double t) {
-  final u = 1 - t;
-  return (b - a) * (3 * u * u) + (c - b) * (6 * u * t) + (d - c) * (3 * t * t);
+  return Path()
+    ..moveTo(a.dx, a.dy)
+    ..cubicTo(p01.dx, p01.dy, p012.dx, p012.dy, tip.dx, tip.dy);
 }
 
 // ---------------------------------------------------------------------------
@@ -308,8 +259,10 @@ class LaidOutNode {
     required this.textPainter,
     required this.color,
     required this.entranceStart,
+    required this.isRtl,
     this.iconPainter,
     this.countPainter,
+    this.showDot = false,
   });
 
   final MindMapNode node;
@@ -330,10 +283,32 @@ class LaidOutNode {
   /// لحظة بدء ظهور العقدة ضمن أنيميشن الدخول (0..1 من زمن الأنيميشن).
   final double entranceStart;
 
+  /// اتجاه نص العقدة، مكتشَفًا من محتواه هو.
+  ///
+  /// يحدّد **جهة النقطة الملوّنة**: Stitch يضعها قبل النص، و"قبل" بالعربي
+  /// يمين لا يسار. بدون هذا تطلع نقطة العنصر العربي بالجهة الغلط من كبسولته.
+  final bool isRtl;
+
+  /// نقطة ملوّنة صغيرة تسبق النص — لغة Stitch لعقد العناصر
+  /// (`w-3 h-3 rounded-full bg-{color}`).
+  final bool showDot;
+
   MindMapLevel get level => node.kind.level;
 
-  /// نصف قطر تقريبي — نقطة الالتحام مع الأغصان.
-  double get radius => math.max(size.width, size.height) / 2;
+  /// المسافة من المركز لحافة العقدة **باتجاه معيّن**.
+  ///
+  /// بدّلت `radius` الثابت السابق: مع الكبسولات الأفقية صار العرض أكبر
+  /// بكثير من الارتفاع، فنصف قطر واحد يبدأ الوصلة بعيدًا عن الكبسولة رأسيًا
+  /// أو داخلها أفقيًا. هذا يرجّع نقطة الحافة الحقيقية لكل اتجاه.
+  double insetAlong(Offset dir) {
+    final len = dir.distance;
+    if (len < 1e-6) return size.height / 2;
+    final ux = dir.dx.abs() / len;
+    final uy = dir.dy.abs() / len;
+    final tx = ux < 1e-6 ? double.infinity : (size.width / 2) / ux;
+    final ty = uy < 1e-6 ? double.infinity : (size.height / 2) / uy;
+    return math.min(tx, ty);
+  }
 
   Rect get rect => Rect.fromCenter(
         center: center,
@@ -425,8 +400,29 @@ bool _collides(Iterable<LaidOutNode> placed, Offset center, Size size) {
 }
 
 const double _maxItemLabelWidth = 152;
-const double _itemPadH = 15;
-const double _itemPadV = 10;
+
+// مسافات Stitch (وحدة 4: sm 8 / md 16 / lg 24). العناصر تاخذ `px-md py-sm`
+// والجذر `px-lg py-md`، مصغَّرة قليلًا لتناسب كانفس جوال بدل شاشة عريضة.
+const double _itemPadH = 14;
+const double _itemPadV = 9;
+const double _catPadH = 16;
+const double _catPadV = 10;
+const double _rootPadH = 22;
+const double _rootPadV = 15;
+
+/// قطر النقطة الملوّنة قبل نص العنصر، والفراغ بينها وبين النص.
+const double _dotSize = 9;
+const double _dotGap = 7;
+
+/// الفراغ بين الأيقونة والنص داخل عقد الجذر والفئة.
+const double _glyphGap = 8;
+
+// يقرأها الرسّام عشان يضع المحتوى بنفس المقاسات اللي حُجزت وقت التخطيط.
+// لو انفصل الرقمان طلع النص لا مركزيًا داخل كبسولته.
+const double kNodeGlyphGap = _glyphGap;
+const double kNodeDotSize = _dotSize;
+const double kNodeDotGap = _dotGap;
+
 const double _margin = 56;
 
 /// تخطيط شعاعي **حتمي بالكامل**: لا عشوائية ولا محاكاة فيزيائية، فنفس
@@ -463,6 +459,7 @@ MindMapLayout layoutOrganic(
     double maxWidth, {
     int maxLines = 2,
     TextAlign? forceAlign,
+    double? letterSpacing,
   }) {
     // ------------------------------------------------------------------
     // اتجاه النص داخل الكانفس.
@@ -477,11 +474,12 @@ MindMapLayout layoutOrganic(
     final tp = TextPainter(
       text: TextSpan(
         text: n.label,
-        style: TextStyle(
+        style: MindropFonts.style(
           fontSize: fontSize,
           height: 1.28,
           fontWeight: weight,
           color: color,
+          letterSpacing: letterSpacing,
         ),
       ),
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -525,12 +523,11 @@ MindMapLayout layoutOrganic(
     return TextPainter(
       text: TextSpan(
         text: '$value',
-        style: TextStyle(
+        style: MindropFonts.style(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
+        ).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
       ),
       textDirection: TextDirection.ltr,
       textScaler: TextScaler.linear(textScale),
@@ -564,25 +561,30 @@ MindMapLayout layoutOrganic(
 
   // ------------------------------------------------------------------ الجذر
 
+  // الجذر: كبسولة أفقية بحدّ محايد وتوهج نيلي — نسخة Stitch حرفيًا
+  // (`rounded-[3rem] border-white/10 shadow-[0_0_30px_rgba(128,131,255,.3)]`).
+  // اللون المخزَّن هنا هو لون **التوهج** لا لون الحد.
   final rootColor = root.kind.color;
   final rootText = buildLabel(
     root,
-    MindropColors.textPrimary,
-    15,
-    FontWeight.w700,
-    120,
+    MindropColors.stitchOnSurface,
+    16,
+    FontWeight.w600,
+    150,
     maxLines: 1,
     forceAlign: TextAlign.center,
+    letterSpacing: -0.16, // headline: -0.01em
   );
-  final rootIcon = buildIcon(root.kind.icon, rootColor, 20);
-  final rootRadius = math.max(
-    58.0,
-    math.max(rootText.width, 92) / 2 + 16,
+  final rootIcon = buildIcon(root.kind.icon, rootColor, 19);
+  final rootIconW = rootIcon == null ? 0.0 : rootIcon.width + _glyphGap;
+  final rootSize = Size(
+    math.max(140, rootText.width + rootIconW + _rootPadH * 2),
+    math.max(rootText.height, rootIcon?.height ?? 0) + _rootPadV * 2,
   );
 
   final placed = <String, LaidOutNode>{};
-  var minX = -rootRadius, maxX = rootRadius;
-  var minY = -rootRadius, maxY = rootRadius;
+  var minX = -rootSize.width / 2, maxX = rootSize.width / 2;
+  var minY = -rootSize.height / 2, maxY = rootSize.height / 2;
 
   void track(Offset c, Size s) {
     minX = math.min(minX, c.dx - s.width / 2);
@@ -594,12 +596,13 @@ MindMapLayout layoutOrganic(
   placed[root.id] = LaidOutNode(
     node: root,
     center: Offset.zero,
-    size: Size.square(rootRadius * 2),
-    shape: organicBlobPath(rootRadius, root.id.hashCode),
+    size: rootSize,
+    shape: pillPath(rootSize),
     textPainter: rootText,
     iconPainter: rootIcon,
     color: rootColor,
     entranceStart: 0,
+    isRtl: Bidi.detectRtlDirectionality(root.label),
   );
 
   // ------------------------------------------------- قطاعات بحجم محتوياتها
@@ -633,37 +636,49 @@ MindMapLayout layoutOrganic(
     final centreAngle = cursor + sector / 2;
     cursor += sector;
 
-    // حجم عقدة الفئة يكبر مع عدد عناصرها — نفس لغة "الفقاعة الأكبر تعني
-    // وزنًا أكبر" بالمراجع البصرية.
-    final catRadius = 40.0 + math.min(items.length, 8) * 2.6;
+    // الفئة: كبسولة أفقية = أيقونة + اسم + عدّاد.
+    //
+    // كانت دائرة بمحتوى مكدّس رأسيًا. Stitch ما فيه دوائر عقد إطلاقًا —
+    // كل عقده كبسولات أفقية، فالتمايز بين المستويات ينتقل من «شكل مختلف»
+    // إلى الحجم والوزن وسماكة الحد ونوع الرمز المتصدّر (أيقونة للفئة،
+    // نقطة للعنصر).
+    //
+    // الأيقونة تبقى مع الاسم المكتوب — Stitch يكتفي بنقطة ملوّنة، لكن
+    // قاعدة المشروع تمنع اللون كإشارة وحيدة، والأيقونة إشارة أقوى من النقطة.
     final catText = buildLabel(
       cat,
-      MindropColors.textPrimary,
-      12.5,
+      branchColor,
+      13.5,
       FontWeight.w700,
-      catRadius * 1.7,
+      132,
       maxLines: 1,
-      forceAlign: TextAlign.center,
+      letterSpacing: 0.7, // label: +0.05em
     );
-    final catIcon = buildIcon(childKind.icon, branchColor, 15);
+    final catIcon = buildIcon(childKind.icon, branchColor, 16);
     final catCount = buildCount(items.length, branchColor);
+
+    final catIconW = catIcon == null ? 0.0 : catIcon.width + _glyphGap;
+    final catSize = Size(
+      catText.width + catIconW + catCount.width + _glyphGap + _catPadH * 2,
+      math.max(catText.height, catIcon?.height ?? 0) + _catPadV * 2,
+    );
 
     final catCenter = Offset(
       math.cos(centreAngle) * hubRadius,
       math.sin(centreAngle) * hubRadius,
     );
-    final catSize = Size.square(catRadius * 2);
 
     placed[cat.id] = LaidOutNode(
       node: cat,
       center: catCenter,
       size: catSize,
-      shape: organicBlobPath(catRadius, cat.id.hashCode),
+      shape: pillPath(catSize),
       textPainter: catText,
       iconPainter: catIcon,
       countPainter: catCount,
       color: branchColor,
       entranceStart: 0.10 + ci * 0.045,
+      isRtl: Bidi.detectRtlDirectionality(cat.label),
     );
     track(catCenter, catSize);
 
@@ -684,13 +699,14 @@ MindMapLayout layoutOrganic(
 
       final itemText = buildLabel(
         item,
-        MindropColors.textPrimary,
+        MindropColors.stitchOnSurfaceVariant,
         13,
         FontWeight.w500,
         _maxItemLabelWidth,
       );
+      // النقطة الملوّنة تسبق النص (لغة Stitch)، فتحجز عرضها + فراغها.
       final itemSize = Size(
-        itemText.width + _itemPadH * 2,
+        itemText.width + _dotSize + _dotGap + _itemPadH * 2,
         itemText.height + _itemPadV * 2,
       );
 
@@ -717,10 +733,12 @@ MindMapLayout layoutOrganic(
         node: item,
         center: c,
         size: itemSize,
-        shape: capsulePath(itemSize),
+        shape: pillPath(itemSize),
         textPainter: itemText,
         color: item.kind.color,
         entranceStart: math.min(0.55, 0.26 + itemOrdinal * 0.022),
+        isRtl: Bidi.detectRtlDirectionality(item.label),
+        showDot: true,
       );
       track(c, itemSize);
       itemOrdinal++;
@@ -762,6 +780,8 @@ MindMapLayout layoutOrganic(
         countPainter: p.countPainter,
         color: p.color,
         entranceStart: p.entranceStart,
+        isRtl: p.isRtl,
+        showDot: p.showDot,
       );
       minY = math.min(minY, c.dy - p.size.height / 2);
       maxY = math.max(maxY, c.dy + p.size.height / 2);
@@ -791,6 +811,8 @@ MindMapLayout layoutOrganic(
       countPainter: p.countPainter,
       color: p.color,
       entranceStart: p.entranceStart,
+      isRtl: p.isRtl,
+      showDot: p.showDot,
     );
     laid.add(moved);
     shifted[n.id] = moved;
@@ -805,7 +827,12 @@ MindMapLayout layoutOrganic(
       fromId: e.fromId,
       toId: e.toId,
       color: to.color,
-      path: branchPath(from.center, from.radius, to.center, to.radius),
+      path: branchPath(
+        from.center,
+        from.insetAlong(to.center - from.center),
+        to.center,
+        to.insetAlong(from.center - to.center),
+      ),
       entranceStart: to.entranceStart,
     ));
   }
