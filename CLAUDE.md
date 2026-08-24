@@ -95,15 +95,9 @@ replace it with `usesCleartextTraffic="true"`; that opens HTTP to every host.
 - Arabic plurals need all six ICU forms (`zero/one/two/few/many/other`).
   `pendingUploads` is the only one today; [widget_test.dart:69](test/widget_test.dart:69)
   fails if someone collapses it to `other`.
-- **Fonts are dual-script**: **Urbanist** (Latin) with IBM Plex Sans Arabic as
-  `fontFamilyFallback`, both via `google_fonts`, defined once in `MindropFonts`.
-  Urbanist has no Arabic glyphs, so the engine picks per-character — a mixed
-  Arabic/English sentence renders each script in its own face with no switching
-  logic.
-  **Urbanist is the identity font and a design-tool export does not override it.**
-  The Stitch export proposes Geist; it was adopted app-wide for one commit and
-  then reverted. Take colour and shape from an export, not the typeface. The
-  Arabic fallback came from the same export and is kept — it filled a real gap.
+- **Fonts are dual-script** — Geist + IBM Plex Sans Arabic, plus JetBrains Mono
+  for numerics. All three live in `MindropFonts`; see **Design system** below for
+  the whole story, including why Geist went in, came out, and went back in.
 - **`TextPainter` inherits no font.** Inside a `CustomPainter` there is no theme,
   so a `TextStyle` without an explicit `fontFamily` silently renders in the
   platform default, not the brand face. This was live for the whole mind map
@@ -167,6 +161,97 @@ User content = transcripts, extracted tasks/goals/ideas/topics, mind-map node la
 
 ---
 
+## Design system — Obsidian Crimson
+
+Everything visual comes from `MindropColors` and `MindropFonts` in
+[app_theme.dart](lib/theme/app_theme.dart). **Never write a literal colour in a
+widget.** Source: Stitch's `obsidian_crimson/DESIGN.md`.
+
+This is the third identity. Neutral-black + orange → Bio-Digital (navy, indigo/
+teal/amber) → Crimson. The lineage matters because two of the current tokens are
+Bio-Digital survivors, on purpose.
+
+### Surfaces are two-tier
+
+`background` `#0A0A0A` is the void; `surface` `#121414` is what components
+actually sit on. The previous identity had one flat value because that round only
+restyled mind-map *nodes*, not the app. Use `surface` when in doubt — it's what
+cards, dialogs and mind-map nodes take.
+
+### One accent, plus neutrals
+
+`crimsonPrimary` `#FFB3B6` is text/icon-safe; `crimsonPrimaryContainer`
+`#E11D48` is the live crimson for actions and glow. Neutrals:
+`crimsonOnSurface`, `crimsonOnSurfaceVariant`, `crimsonOutline`.
+
+### The four category colours are a compromise — read before "fixing" them
+
+The app needs four distinguishable categories. Crimson ships **one** accent and
+two *identical* greys (`#c8c6c5` for both secondary and tertiary). Forcing two
+categories into the same grey destroys the point of colour-coding, so:
+
+| Category | Colour | Origin |
+|---|---|---|
+| tasks | `#44E2CD` teal | Bio-Digital, kept |
+| goals | `#F9BD22` amber | Bio-Digital, kept |
+| ideas | `#E11D48` crimson | Crimson `primary-container` |
+| topics | `#FFB4AB` rose | unchanged — **identical in both exports** |
+
+The root node takes `crimsonPrimary` `#FFB3B6`, and uses it for its **halo only**
+(its border is white at 10%).
+
+**Why ideas got `primary-container` and not `primary`:** the literal mapping puts
+`#FFB3B6` on ideas, one unit per channel away from topics' `#FFB4AB` — two sibling
+categories no eye could separate. The root can safely hold the near-twin because
+it never sits beside topics as a sibling. Real Crimson hues for teal and amber
+need another Stitch pass; **don't invent hex to close the gap.**
+
+This has now bitten once per palette — Bio-Digital's `primary` vs
+`primary-container` failed the same way. The rule: two sibling categories must
+never be separated by saturation alone.
+
+### Type: Geist + IBM Plex Sans Arabic + JetBrains Mono
+
+Geist is the Latin face, IBM Plex Sans Arabic the `fontFamilyFallback`. Geist has
+no Arabic glyphs, so the engine picks per character and a mixed sentence renders
+each script correctly with no switching logic.
+
+JetBrains Mono (`MindropFonts.monoStyle`) is for **numerics only** — the record
+timer, the mind-map category counts, the root's timestamp label. It is not a
+general text face; don't spread it.
+
+> Geist went in, was reverted in `5ecf9d5`, and went back in here. It was pulled
+> because it arrived as scope creep inside a screen-scoped task, **not** because
+> the typeface was rejected. Both times the Arabic fallback stayed.
+
+### RTL, per Crimson's own spec
+
+- **Arabic line-height +15%** (`MindropFonts.lineHeight`) so diacritics don't clip
+  at the top. Applied where direction is known at build time.
+- **Mirror directionally-meaningful icons.** Checked, don't redo this:
+  `Icons.arrow_back_rounded` already carries `matchTextDirection: true` and
+  mirrors itself. `Icons.play_arrow_rounded` does **not**, so `_StateIcon` in
+  [record_button.dart](lib/widgets/record_button.dart) flips it manually. `mic`
+  and `stop` aren't directional.
+- **Progress fills from the right in Arabic** — no gap today: neither of these
+  screens has a playhead or progress bar, and the record waveform is symmetric.
+
+### Ignore Crimson's blur
+
+Its `DESIGN.md` names 20–24px backdrop blur as a core pillar. Skip it — same
+substitute as always: a `Container` at ~30–40% alpha with a hairline border. The
+no-blur rule predates every export and is backed by measurement.
+
+### Not yet converted
+
+`history_screen` and `playback_screen` still use the pre-Crimson `accent` /
+`accentSoft` / `neonTeal` / `neonBlue` tokens, which is why those constants still
+exist. The organic waveform's ribbon colours were moved out of the widget into
+`wave*` tokens but **deliberately not recoloured** — Crimson has one accent and
+the waveform needs three distinct ribbons; that needs its own Stitch pass.
+
+---
+
 ## Mind map
 
 Scope is **per-recording only**, and that is data-driven: at last check only 3
@@ -196,11 +281,12 @@ solve a problem that doesn't exist.
 - `GestureDetector` is nested **inside** `InteractiveViewer`, so `localPosition`
   already arrives in canvas coordinates — no manual matrix inversion.
 
-### Visual language comes from the Stitch export
+### Visual language
 
-`bio_digital_organic_system/DESIGN.md` + `mind_map_screen/code.html`. Tokens live
-in `MindropColors` under the `stitch*` prefix, named after the Material roles the
-export ships so the mapping stays traceable.
+Colour and type now come from **Obsidian Crimson** — see **Design system** above;
+don't re-derive them here. The structural decisions below came from the earlier
+Bio-Digital pass and survive the rebrand unchanged, because they are about shape
+and layout, not palette.
 
 - **All three levels are pills.** Round 1 used deterministic wobbly "blobs" for
   root and category. The export states one shape language — `rounded-full` for
@@ -216,11 +302,10 @@ export ships so the mapping stays traceable.
 - **The dot follows text direction.** "Leading" is the right side in Arabic, so
   the whole content row flips for RTL nodes — same principle as
   `transcript_text.dart`, applied to layout instead of text.
-- **Four categories, three accent hues.** The export ships secondary/tertiary/
-  primary and cycles them. `primary-container` was tried as the fourth and failed
-  on real data: a recording with only ideas + topics — a common shape — rendered
-  effectively monochrome. Topics now use the export's `error` role (coral) purely
-  as a fourth accent, with no error semantics attached.
+- **Category colours are a documented compromise**, not a clean mapping — the
+  detail is in **Design system**. The rule that produced it: two sibling
+  categories must never be told apart by saturation alone. That has now bitten
+  twice, once per palette.
 
 Each layout rule fixes a real failure:
 
@@ -282,10 +367,9 @@ What the Stitch pass actually changed:
 - **Press is tracked separately from tap** (`onTapDown`/`onTapUp`/`onTapCancel`),
   so the shape answers the finger before recording starts. The icon (mic ↔ stop)
   is still the primary state signal; shape only reinforces it.
-- **Gradient and glow moved to the Bio-Digital roles** —
-  `stitchPrimaryContainer → stitchSecondary`. This displaces the orange that
-  `MindropColors.accent` still describes as "the record button" colour. The token
-  comment is now narrower than the truth; the orange survives elsewhere.
+- **Gradient and glow are crimson** (`crimsonPrimaryContainer → crimsonPrimary`).
+  The original orange `accent` no longer appears on this screen; it survives only
+  on the two screens the rebrand hasn't reached yet.
 - **Pulse rings: two, not four, and indigo.** Two read as a pulse, four as a
   continuous wave. `PulseRings.color` is now **required** — it used to default to
   a hardcoded `Color(0xFFFF7A1A)`, which broke the MindropColors-only rule and

@@ -30,23 +30,25 @@ extension MindMapNodeKindStyle on MindMapNodeKind {
         _ => MindMapLevel.item,
       };
 
-  /// اللون من [MindropColors] حصرًا — أدوار نظام Stitch «Bio-Digital».
+  /// اللون من [MindropColors] حصرًا — أدوار Obsidian Crimson.
   ///
-  /// Stitch يدوّر **ثلاث** درجات على العقد (secondary/tertiary/primary)
-  /// ويترك الجذر بلا لون حد: حدّه أبيض 10% وتوهجه نيلي. عندنا أربع فئات
-  /// ثابتة، فناخذ الثلاث كما هي ونضيف `primary-container` النيلي للرابعة —
-  /// وهو نفس اللون اللي يتوهج به الجذر، فما نخترع درجة خارج النظام.
+  /// **توزيع القرمزي غير حرفي عمدًا.** القراءة الحرفية تعطي «الأفكار» دور
+  /// `primary` (#FFB3B6)، لكن «المواضيع» تحمل #FFB4AB — الفرق بينهما وحدة
+  /// واحدة بكل قناة، أي فئتان شقيقتان لا تُفرَّقان بالعين. فأخذت «الأفكار»
+  /// `primary-container` القرمزي الحيّ (#E11D48)، وانتقل `primary` الفاتح
+  /// للجذر.
   ///
-  /// `primary` (#C0C1FF) و`primary-container` (#8083FF) من عائلة واحدة لكن
-  /// تشبّعهما مختلف بوضوح، وكل فرع يحمل أيقونته واسمه المكتوب فوق ذلك —
-  /// فاللون ما هو الإشارة الوحيدة أبدًا.
+  /// الجذر يستعمل لونه **للهالة فقط** (حدّه أبيض 10%)، وما يجلس أبدًا جنب
+  /// «المواضيع» كشقيق — فتقارب #FFB3B6 و#FFB4AB ما يضرّ هناك.
+  ///
+  /// ولا لون مخترع: القيمتان الجديدتان كلتاهما من تصدير Crimson نفسه.
   Color get color => switch (this) {
-        MindMapNodeKind.recording => MindropColors.stitchPrimaryContainer,
-        MindMapNodeKind.task => MindropColors.stitchSecondary,
-        MindMapNodeKind.goal => MindropColors.stitchTertiary,
-        MindMapNodeKind.idea => MindropColors.stitchPrimary,
-        MindMapNodeKind.topic => MindropColors.stitchError,
-        MindMapNodeKind.category => MindropColors.stitchOnSurfaceVariant,
+        MindMapNodeKind.recording => MindropColors.crimsonPrimary,
+        MindMapNodeKind.task => MindropColors.categoryTeal,
+        MindMapNodeKind.goal => MindropColors.categoryAmber,
+        MindMapNodeKind.idea => MindropColors.crimsonPrimaryContainer,
+        MindMapNodeKind.topic => MindropColors.categoryRose,
+        MindMapNodeKind.category => MindropColors.crimsonOutline,
       };
 
   /// أيقونة مميّزة لكل فئة.
@@ -476,7 +478,9 @@ MindMapLayout layoutOrganic(
         text: n.label,
         style: MindropFonts.style(
           fontSize: fontSize,
-          height: 1.28,
+          // العربية تحتاج سطرًا أعلى ~15% وإلا انقصّت التشكيلات من فوق —
+          // نصّ عليها تصدير Crimson، ونعرف الاتجاه هنا أصلًا.
+          height: MindropFonts.lineHeight(1.28, isRtl),
           fontWeight: weight,
           color: color,
           letterSpacing: letterSpacing,
@@ -498,6 +502,35 @@ MindMapLayout layoutOrganic(
     final natural = math.min(tp.maxIntrinsicWidth, maxWidth);
     tp.layout(maxWidth: natural);
     return tp;
+  }
+
+  /// تسمية الجذر: طابع زمني، خط أحادي العرض، سطر واحد متمركز.
+  ///
+  /// منفصلة عن [buildLabel] لأنها **ليست محتوى مستخدم**: وقت مُنسَّق تولّده
+  /// الشاشة، فاتجاهه LTR دائمًا مثل بقية الأرقام بالتطبيق — لا يُكتشف من
+  /// محتواه ولا ينقلب بواجهة عربية.
+  TextPainter buildTimeLabel(
+    MindMapNode n,
+    Color color,
+    double fontSize,
+    FontWeight weight,
+  ) {
+    return TextPainter(
+      text: TextSpan(
+        text: n.label,
+        style: MindropFonts.monoStyle(
+          fontSize: fontSize,
+          fontWeight: weight,
+          color: color,
+          letterSpacing: 0.4,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      ellipsis: '…',
+      textScaler: TextScaler.linear(textScale),
+    )..layout();
   }
 
   TextPainter? buildIcon(IconData? icon, Color color, double size) {
@@ -523,11 +556,11 @@ MindMapLayout layoutOrganic(
     return TextPainter(
       text: TextSpan(
         text: '$value',
-        style: MindropFonts.style(
+        style: MindropFonts.monoStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
-        ).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+        ),
       ),
       textDirection: TextDirection.ltr,
       textScaler: TextScaler.linear(textScale),
@@ -565,15 +598,12 @@ MindMapLayout layoutOrganic(
   // (`rounded-[3rem] border-white/10 shadow-[0_0_30px_rgba(128,131,255,.3)]`).
   // اللون المخزَّن هنا هو لون **التوهج** لا لون الحد.
   final rootColor = root.kind.color;
-  final rootText = buildLabel(
+  // تسمية الجذر طابع زمني، فتاخذ الخط أحادي العرض (`data-tabular`).
+  final rootText = buildTimeLabel(
     root,
-    MindropColors.stitchOnSurface,
-    16,
-    FontWeight.w600,
-    150,
-    maxLines: 1,
-    forceAlign: TextAlign.center,
-    letterSpacing: -0.16, // headline: -0.01em
+    MindropColors.crimsonOnSurface,
+    15,
+    FontWeight.w500,
   );
   final rootIcon = buildIcon(root.kind.icon, rootColor, 19);
   final rootIconW = rootIcon == null ? 0.0 : rootIcon.width + _glyphGap;
@@ -699,7 +729,7 @@ MindMapLayout layoutOrganic(
 
       final itemText = buildLabel(
         item,
-        MindropColors.stitchOnSurfaceVariant,
+        MindropColors.crimsonOnSurfaceVariant,
         13,
         FontWeight.w500,
         _maxItemLabelWidth,

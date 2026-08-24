@@ -192,7 +192,7 @@ class MindMapPainter extends CustomPainter {
     canvas.drawPath(
       n.shape,
       Paint()
-        ..color = MindropColors.stitchSurfaceContainer.withValues(
+        ..color = MindropColors.surface.withValues(
           alpha: ((selected ? 0.98 : 0.86) * fade).clamp(0.0, 1.0),
         ),
     );

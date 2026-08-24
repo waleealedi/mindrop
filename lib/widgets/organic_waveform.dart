@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// موجة صوتية عضوية متوهجة — بديل الأعمدة العمودية.
 ///
 /// الفكرة: بدل ما نرسم تاريخ العيّنات كأعمدة، نرسم ٣ "أشرطة" منحنية
@@ -127,13 +129,18 @@ class _OrganicWavePainter extends CustomPainter {
   final double level;
   final bool active;
 
+  /// ألوان الأشرطة **بلا تغيير لهجة بتحوّل Crimson** — نُقلت من قيم حرفية
+  /// داخل هذا الملف إلى [MindropColors] فقط. صبغها قرمزيًا قرار تصميمي ما
+  /// يحدّده تصدير Crimson (نظامه لهجة واحدة، والموجة ثلاثة أشرطة متمايزة)،
+  /// فيحتاج تمريرة Stitch مستقلة لا اجتهادًا هنا.
+  ///
   /// ترددات وسرعات غير متناسبة عمدًا (2.0 / 3.1 / 2.6 و 1.0 / -0.72 / 0.5)
   /// عشان الأشرطة ما ترجع لنفس الوضع بشكل دوري ملحوظ — الحركة تبين
   /// عضوية بدل ما تبين حلقة مكررة.
   static const _ribbons = <_Ribbon>[
     _Ribbon(
-      from: Color(0xFF2EE6C5),
-      to: Color(0xFF4C8DFF),
+      from: MindropColors.waveTeal,
+      to: MindropColors.waveBlue,
       freq: 2.0,
       phase: 0.0,
       speed: 1.0,
@@ -141,8 +148,8 @@ class _OrganicWavePainter extends CustomPainter {
       thickness: 0.085,
     ),
     _Ribbon(
-      from: Color(0xFF3BE08F),
-      to: Color(0xFF2EE6C5),
+      from: MindropColors.waveLime,
+      to: MindropColors.waveTeal,
       freq: 3.1,
       phase: 1.7,
       speed: -0.72,
@@ -150,8 +157,8 @@ class _OrganicWavePainter extends CustomPainter {
       thickness: 0.060,
     ),
     _Ribbon(
-      from: Color(0xFFFF7A9E),
-      to: Color(0xFFFFA24D),
+      from: MindropColors.wavePink,
+      to: MindropColors.waveAmber,
       freq: 2.6,
       phase: 3.4,
       speed: 0.50,

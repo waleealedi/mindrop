@@ -1,111 +1,142 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// توكنات الهوية البصرية لـ Mindrop — Dark Glassmorphism.
+/// توكنات الهوية البصرية لـ Mindrop — **Obsidian Crimson**.
 ///
-/// كل لون هنا مصدره وثيقة الرؤية التصميمية (انظر مستند
-/// "رؤية-التصميم-Mindrop" داخل المشروع). لا تكتب ألوانًا مباشرة
-/// داخل الواجهات — استخدم هذه الثوابت فقط عشان تبقى الهوية موحّدة.
+/// مصدر القيم: تصدير Stitch (`obsidian_crimson/DESIGN.md`). قبلها كانت
+/// «Bio-Digital Organic» (نيلي/فيروزي/كهرماني على كحلي)، وقبلها أسود محايد
+/// ببرتقالي. التحوّل كامل ومقصود، مو توسّع نطاق.
+///
+/// لا تكتب ألوانًا مباشرة داخل الودجتس — استخدم هذه الثوابت فقط.
 class MindropColors {
   const MindropColors._();
 
-  /// خلفية أساسية: أسود فحمي مطفي عميق.
-  static const background = Color(0xFF0D0D0D);
+  // ------------------------------------------------------------- الأسطح
+  //
+  // طبقتان لا طبقة واحدة: خلفية «فراغ» شبه سوداء، وسطح مرتفع أفتح فوقها.
+  // قبل هذا كانت قيمة واحدة مسطّحة (#0D0D0D)، لأن التحوّل السابق كان
+  // مقصورًا على عقد الخريطة ولا يشمل طلاء التطبيق كله.
+
+  /// الطبقة القاعدية (Base Layer عند Stitch) — الفراغ اللي تطفو فوقه البقية.
+  static const background = Color(0xFF0A0A0A);
+
+  /// السطح المرتفع — ما تجلس عليه أغلب المكوّنات فعليًا.
+  static const surface = Color(0xFF121414);
 
   /// أساس الزجاج الداكن للبطاقات والحاويات.
   static const glass = Color(0xFF393939);
 
-  /// اللون التفاعلي الأساسي: برتقالي متوهج (زر التسجيل).
-  static const accent = Color(0xFFFF7A1A);
-  static const accentSoft = Color(0xFFFFA24D);
-
-  /// ألوان نيون ثانوية: تُستخدم للموجة الصوتية والعقد وصناديق الاختيار.
-  static const neonTeal = Color(0xFF2EE6C5);
-  static const neonBlue = Color(0xFF4C8DFF);
-
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFF9A9AA0);
-
   /// حد فاتح شفاف يعطي حافة الزجاج بريقًا خفيفًا.
   static Color glassBorder = Colors.white.withValues(alpha: 0.08);
 
-  // ---------------------------------------------------------------------
-  // نظام Stitch — "Bio-Digital Organic System".
+  // ------------------------------------------------------------- اللهجة
   //
-  // مصدرها تصدير Stitch الرسمي (`bio_digital_organic_system/DESIGN.md`)،
-  // و**مقصورة على الخريطة الذهنية** حاليًا. خلفية النظام عند Stitch كحلية
-  // (#0b1326) بينما خلفية Mindrop أسود محايد (#0D0D0D)؛ القرار كان الإبقاء
-  // على الأسود بكل الشاشات، فناخذ لهجة العقد والتوهج فقط لا الخلفية.
+  // Obsidian Crimson نظام **لهجة واحدة + محايدات**، بنفس نمط
+  // primary/primary-container المستعمل من قبل.
+
+  /// primary — قرمزي فاتح، آمن للنص والأيقونات على الأسود.
+  static const crimsonPrimary = Color(0xFFFFB3B6);
+
+  /// primary-container — القرمزي الحيّ: الأزرار والتوهج ونداءات الفعل.
+  static const crimsonPrimaryContainer = Color(0xFFE11D48);
+
+  /// on-surface — نص أساسي.
+  static const crimsonOnSurface = Color(0xFFE3E2E2);
+
+  /// on-surface-variant — نص ثانوي، فيه دفء ورديّ خفيف.
+  static const crimsonOnSurfaceVariant = Color(0xFFE5BDBE);
+
+  /// outline — حدود ومحايد.
+  static const crimsonOutline = Color(0xFFAC8889);
+
+  // -------------------------------------------------- ألوان الفئات الأربع
   //
-  // الأسماء تتبع أدوار Material اللي يصدّرها Stitch نفسه، مو أسماء لونية
-  // وصفية: لو تغيّر التصدير لاحقًا يبقى الربط بين الطرفين واضحًا.
+  // **تسوية مقصودة، موثّقة عشان ما تُقرأ كإهمال.** التطبيق يحتاج أربع درجات
+  // متمايزة (مهام/أهداف/أفكار/مواضيع)، وتصدير Crimson يوفّر لهجة واحدة
+  // ومحايدَين رماديين **متطابقين** (#c8c6c5 لكل من secondary وtertiary).
+  // فرض الرمادي على فئتين يلغي فائدة الترميز اللوني من أصله.
   //
-  // (حلّت هذي محل `neonLime`/`neonPink` اللي أُضيفا بالجولة السابقة لتغطية
-  // أربع فئات — Stitch يوفّر الأربع الآن، فالثابتان صارا بلا مبرّر.)
-  // ---------------------------------------------------------------------
+  // فالنتيجة: اثنتان تبقيان على درجتَي Bio-Digital كما هما، والقرمزي ياخذ
+  // «الأفكار». درجات Crimson حقيقية للاثنتين الباقيتين تحتاج تمريرة Stitch
+  // جديدة — لا تُخترع هنا.
 
-  /// primary — بنفسجي فاتح. فرع «الأفكار».
-  static const stitchPrimary = Color(0xFFC0C1FF);
+  /// فيروزي — فرع «المهام». من Bio-Digital، مُبقى عمدًا.
+  static const categoryTeal = Color(0xFF44E2CD);
 
-  /// primary-container — نيلي مشبع. **توهج الجذر وحده** — الجذر بلا لون حد
-  /// (حدّه أبيض 10%)، فهويته اللونية كلها بالهالة.
-  static const stitchPrimaryContainer = Color(0xFF8083FF);
+  /// كهرماني — فرع «الأهداف». من Bio-Digital، مُبقى عمدًا.
+  static const categoryAmber = Color(0xFFF9BD22);
 
-  /// secondary — فيروزي. فرع «المهام».
-  static const stitchSecondary = Color(0xFF44E2CD);
+  /// ورديّ — فرع «المواضيع». **نفس القيمة بالتصديرين** (دور `error` عند
+  /// الاثنين)، فما تغيّرت بالتحوّل إطلاقًا.
+  static const categoryRose = Color(0xFFFFB4AB);
 
-  /// tertiary — كهرماني. فرع «الأهداف».
-  static const stitchTertiary = Color(0xFFF9BD22);
+  /// أحمر رسائل الخطأ. كان مكتوبًا حرفيًا داخل شاشة التسجيل.
+  static const errorRed = Color(0xFFFF6B6B);
 
-  /// on-surface — نص الجذر (أبيض مزرقّ، مو أبيض نقي).
-  static const stitchOnSurface = Color(0xFFDAE2FD);
+  // -------------------------------------------------- ألوان الموجة العضوية
+  //
+  // أشرطة الموجة بشاشة التسجيل كانت ترسم قيمًا حرفية داخل الودجت — نفس صنف
+  // الخلل اللي وُجد بـ `PulseRings.color`. نُقلت هنا **كما هي بلا تغيير
+  // لهجة**: تلوينها قرمزيًا قرار تصميمي ما يحدّده تصدير Crimson، فيحتاج
+  // تمريرة مستقلة.
+  static const waveTeal = Color(0xFF2EE6C5);
+  static const waveBlue = Color(0xFF4C8DFF);
+  static const waveLime = Color(0xFF3BE08F);
+  static const wavePink = Color(0xFFFF7A9E);
+  static const waveAmber = Color(0xFFFFA24D);
 
-  /// on-surface-variant — نص العناصر.
-  static const stitchOnSurfaceVariant = Color(0xFFC7C4D7);
+  // ---------------------------------------------------- موروث قبل التحوّل
+  //
+  // شاشتا «أفكارك» والاستماع لسا تستعملهما، وهما خارج نطاق هذي الجولة.
+  // تبقى لين تشملهما تمريرة لاحقة — حذفها الآن يكسر شاشتين شغّالتين.
+  static const accent = Color(0xFFFF7A1A);
+  static const accentSoft = Color(0xFFFFA24D);
+  static const neonTeal = Color(0xFF2EE6C5);
+  static const neonBlue = Color(0xFF4C8DFF);
 
-  /// surface-container — تعبئة العقدة.
-  static const stitchSurfaceContainer = Color(0xFF171F33);
-
-  /// error — مرجانيّ. فرع «المواضيع».
-  ///
-  /// **ليش دور `error` كلون فرع:** تصدير Stitch يشحن ثلاث درجات لهجة فقط
-  /// (secondary/tertiary/primary) ويدوّرها على العقد، بينما عندنا أربع فئات
-  /// ثابتة. جرّبنا `primary-container` النيلي رابعًا فطلع قريبًا جدًا من
-  /// `primary` البنفسجي: تسجيل فيه «أفكار + مواضيع» فقط — وهي أكثر تركيبة
-  /// شائعة بالبيانات الحقيقية — كان يطلع أحادي اللون تمامًا.
-  /// `error` هو الدرجة الوحيدة المتبقّية بالتصدير وهي متمايزة فعلًا، وما لها
-  /// أي استعمال دلالي بالخريطة، فناخذها كلونٍ رابع لا كإشارة خطأ.
-  static const stitchError = Color(0xFFFFB4AB);
+  // ---------------------------------------------------------------- النص
+  static const textPrimary = Color(0xFFFFFFFF);
+  static const textSecondary = Color(0xFF9A9AA0);
 }
 
-/// خطوط الهوية — Urbanist للاتيني و IBM Plex Sans Arabic للعربي.
+/// خطوط الهوية — Geist للاتيني، IBM Plex Sans Arabic للعربي،
+/// JetBrains Mono للأرقام والطوابع الزمنية.
 ///
-/// **ليش Urbanist مو Geist:** تصدير Stitch يقترح Geist، لكن Urbanist خط
-/// الهوية من وثيقة التصميم الأصلية ومن قبل التصدير. اقتراح أداة تصميم ما
-/// يلغي هوية قائمة، فالتصدير يعطينا اللون والشكل لا العائلة النصية.
-/// (كانت النسخة السابقة بدّلت الاثنين لـ Geist — تصحيح مقصود.)
+/// **ملاحظة على تاريخ القرار:** Geist طُبّق مرة ثم أُلغي بـ `5ecf9d5`، لأنه
+/// دخل كتوسّع نطاق داخل مهمة محصورة بشاشة واحدة — لا لأن الخط مرفوض. الحين
+/// هو جزء من تحوّل هوية كامل مصرّح به، والتعليق القديم اللي كان يشرح «ليش
+/// Urbanist مو Geist» صار متجاوَزًا فأُزيل بدل ما يبقى يناقض الكود الحي.
 ///
-/// **نظام سكربتين مقصود:** Urbanist ما فيه محارف عربية، فنمرّره عائلةً
-/// أساسية ونحط العربي بـ `fontFamilyFallback`. المحرك يختار العائلة حسب
-/// المحرف نفسه، فالجملة المخلوطة (عربي + إنجليزي بنفس السطر — وهي الحالة
-/// الطبيعية عند مستخدم Mindrop) تطلع بكل سكربت على خطه بلا أي تبديل يدوي.
-///
-/// نخزّن الاسمين مرة واحدة: `GoogleFonts.x()` تبني `TextStyle` كامل بكل
-/// نداء، والمطلوب هنا اسم العائلة فقط.
+/// **نظام سكربتين مقصود:** Geist ما فيه محارف عربية، فنمرّره عائلةً أساسية
+/// ونحط العربي بـ `fontFamilyFallback`. المحرك يختار العائلة حسب المحرف
+/// نفسه، فالجملة المخلوطة (عربي + إنجليزي بنفس السطر — وهي الحالة الطبيعية
+/// عند مستخدم Mindrop) تطلع بكل سكربت على خطه بلا أي تبديل يدوي.
 class MindropFonts {
   const MindropFonts._();
 
-  static final String? latin = GoogleFonts.urbanist().fontFamily;
+  static final String? latin = GoogleFonts.geist().fontFamily;
   static final String? arabic = GoogleFonts.ibmPlexSansArabic().fontFamily;
+
+  /// أرقام وطوابع زمنية (`data-tabular` و`label-sm` عند Stitch).
+  static final String? mono = GoogleFonts.jetBrainsMono().fontFamily;
 
   /// قائمة الاحتياط جاهزة للتمرير لأي `TextStyle`.
   static final List<String> fallback = [if (arabic != null) arabic!];
 
+  /// زيادة ارتفاع السطر للعربي.
+  ///
+  /// تصدير Crimson ينصّ عليها صراحةً: العربية تحتاج ارتفاع سطر أكبر ~15%
+  /// عشان ما تنقص التشكيلات من أعلى السطر. نطبّقها حيث نعرف اتجاه النص
+  /// فعلًا وقت البناء.
+  static const double rtlLineHeightBoost = 1.15;
+
+  static double lineHeight(double base, bool isRtl) =>
+      isRtl ? base * rtlLineHeightBoost : base;
+
   /// نمط نصي بالسكربتين — للرسم داخل `CustomPainter`.
   ///
   /// ضروري هناك تحديدًا: `TextPainter` ما يرث من شجرة الودجتس إطلاقًا، فأي
-  /// `TextStyle` بلا `fontFamily` يطلع بخط النظام لا بخط الهوية. (كانت هذي
-  /// حالة عقد الخريطة فعلًا قبل هذا التغيير.)
+  /// `TextStyle` بلا `fontFamily` يطلع بخط النظام لا بخط الهوية.
   static TextStyle style({
     required double fontSize,
     required FontWeight fontWeight,
@@ -121,6 +152,26 @@ class MindropFonts {
       color: color,
       height: height,
       letterSpacing: letterSpacing,
+    );
+  }
+
+  /// نمط أرقام أحادي العرض — يمنع «رقص» التايمر بين إطار وإطار.
+  static TextStyle monoStyle({
+    required double fontSize,
+    required FontWeight fontWeight,
+    required Color color,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return TextStyle(
+      fontFamily: mono,
+      fontFamilyFallback: fallback,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+      fontFeatures: const [FontFeature.tabularFigures()],
     );
   }
 }
@@ -160,24 +211,25 @@ class MindropTheme {
     return base.copyWith(
       scaffoldBackgroundColor: MindropColors.background,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: MindropColors.accent,
+        seedColor: MindropColors.crimsonPrimaryContainer,
         brightness: Brightness.dark,
       ).copyWith(
-        surface: MindropColors.background,
-        primary: MindropColors.accent,
-        secondary: MindropColors.neonTeal,
+        surface: MindropColors.surface,
+        primary: MindropColors.crimsonPrimaryContainer,
+        secondary: MindropColors.crimsonPrimary,
       ),
-      // Urbanist + IBM Plex Sans Arabic. تُجلب أول مرة وتُخزَّن محليًا، وإذا
+      // Geist + IBM Plex Sans Arabic. تُجلب أول مرة وتُخزَّن محليًا، وإذا
       // تعذّر ذلك يرجع Flutter لخط النظام بدون ما ينكسر شي.
-      textTheme:
-          _dualScript(GoogleFonts.urbanistTextTheme(base.textTheme)).apply(
-        bodyColor: MindropColors.textPrimary,
-        displayColor: MindropColors.textPrimary,
+      textTheme: _dualScript(GoogleFonts.geistTextTheme(base.textTheme)).apply(
+        bodyColor: MindropColors.crimsonOnSurface,
+        displayColor: MindropColors.crimsonOnSurface,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: const Color(0xFF161616),
+        // كانت #161616 مكتوبة حرفيًا هنا.
+        backgroundColor: MindropColors.surface,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        // Crimson: بطاقات بزوايا 1rem بدل 24.
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

@@ -268,8 +268,8 @@ class _RecordScreenState extends State<RecordScreen>
                       : Icons.check_circle_rounded,
                   size: 20,
                   color: isError
-                      ? const Color(0xFFFF6B6B)
-                      : MindropColors.neonTeal,
+                      ? MindropColors.errorRed
+                      : MindropColors.crimsonPrimary,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -364,11 +364,15 @@ class _RecordScreenState extends State<RecordScreen>
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [MindropColors.accentSoft, MindropColors.accent],
+                colors: [
+                  MindropColors.crimsonPrimary,
+                  MindropColors.crimsonPrimaryContainer,
+                ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: MindropColors.accent.withValues(alpha: 0.45),
+                  color: MindropColors.crimsonPrimaryContainer
+                      .withValues(alpha: 0.45),
                   blurRadius: 16,
                 ),
               ],
@@ -455,10 +459,10 @@ class _RecordScreenState extends State<RecordScreen>
             height: 7,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: MindropColors.neonTeal,
+              color: MindropColors.crimsonPrimary,
               boxShadow: [
                 BoxShadow(
-                  color: MindropColors.neonTeal.withValues(alpha: 0.7),
+                  color: MindropColors.crimsonPrimary.withValues(alpha: 0.7),
                   blurRadius: 8,
                 ),
               ],
@@ -481,17 +485,18 @@ class _RecordScreenState extends State<RecordScreen>
   Widget _buildStage({required bool isLive, required bool isRecording}) {
     // نشتق من ثيم النصوص عشان يورث خط Urbanist. AnimatedDefaultTextStyle
     // يستبدل النمط الافتراضي بالكامل، فلو بنيناه من الصفر بيرجع لخط النظام.
-    final timerStyle = Theme.of(context).textTheme.displayMedium!.copyWith(
-          fontSize: 58,
-          fontWeight: FontWeight.w200,
-          letterSpacing: 2,
-          height: 1,
-          // أرقام بعرض ثابت: يمنع "رقصة" التايمر كل ثانية.
-          fontFeatures: const [FontFeature.tabularFigures()],
-          color: isLive
-              ? MindropColors.textPrimary
-              : MindropColors.textSecondary.withValues(alpha: 0.55),
-        );
+    // التايمر قراءة بيانات لا نص واجهة — `data-tabular` عند Crimson، يعني
+    // JetBrains Mono. ما نشتق من ثيم النصوص هنا لأن العائلة نفسها تختلف؛
+    // `monoStyle` يحمل الخط والأرقام ثابتة العرض معًا.
+    final timerStyle = MindropFonts.monoStyle(
+      fontSize: 54,
+      fontWeight: FontWeight.w300,
+      letterSpacing: 1,
+      height: 1,
+      color: isLive
+          ? MindropColors.crimsonOnSurface
+          : MindropColors.crimsonOutline.withValues(alpha: 0.65),
+    );
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -545,7 +550,7 @@ class _RecordScreenState extends State<RecordScreen>
               active: isRecording,
               level: _level,
               endRadius: 96,
-              color: MindropColors.stitchPrimaryContainer,
+              color: MindropColors.crimsonPrimaryContainer,
               child: RecordButton(
                 state: _state,
                 level: _level,
@@ -572,7 +577,7 @@ class _RecordScreenState extends State<RecordScreen>
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.16,
-                      color: MindropColors.stitchPrimary,
+                      color: MindropColors.crimsonPrimary,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -581,7 +586,7 @@ class _RecordScreenState extends State<RecordScreen>
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w500,
-                      color: MindropColors.stitchOnSurfaceVariant,
+                      color: MindropColors.crimsonOnSurfaceVariant,
                     ),
                   ),
                 ],

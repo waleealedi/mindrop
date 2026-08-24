@@ -149,9 +149,9 @@ class _RecordButtonState extends State<RecordButton>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            MindropColors.stitchPrimaryContainer
+                            MindropColors.crimsonPrimaryContainer
                                 .withValues(alpha: haloOpacity),
-                            MindropColors.stitchPrimaryContainer
+                            MindropColors.crimsonPrimaryContainer
                                 .withValues(alpha: 0),
                           ],
                         ),
@@ -175,8 +175,8 @@ class _RecordButtonState extends State<RecordButton>
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          MindropColors.stitchPrimaryContainer,
-                          MindropColors.stitchSecondary,
+                          MindropColors.crimsonPrimaryContainer,
+                          MindropColors.crimsonPrimary,
                         ],
                       ),
                       // مقابل `inset 0 0 20px rgba(255,255,255,.1)` عند
@@ -186,21 +186,16 @@ class _RecordButtonState extends State<RecordButton>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: MindropColors.stitchPrimaryContainer
+                          color: MindropColors.crimsonPrimaryContainer
                               .withValues(alpha: 0.34 + pulse * 0.22),
                           blurRadius: 30 + pulse * 20,
                           spreadRadius: pulse * 4,
                         ),
                       ],
                     ),
-                    child: Icon(
-                      isRecording
-                          ? Icons.stop_rounded
-                          : (isPaused
-                              ? Icons.play_arrow_rounded
-                              : Icons.mic_rounded),
-                      color: Colors.white,
-                      size: 34,
+                    child: _StateIcon(
+                      isRecording: isRecording,
+                      isPaused: isPaused,
                     ),
                   ),
                 ],
@@ -210,5 +205,46 @@ class _RecordButtonState extends State<RecordButton>
         ),
       ),
     );
+  }
+}
+
+/// أيقونة حالة الزر، مع عكس الأيقونات ذات الاتجاه بالواجهة العربية.
+///
+/// **الفجوة اللي تسدّها:** تصدير Crimson ينصّ على عكس كل أيقونة لها معنى
+/// اتجاهي (الأسهم وأيقونات التشغيل) بالعربي. فحصنا أيقونات هذا الزر:
+///
+///   `Icons.arrow_back_rounded`  → `matchTextDirection: true` — ينعكس وحده،
+///                                  فلا يحتاج أي شي (بشاشة الخريطة).
+///   `Icons.play_arrow_rounded`  → **بلا** الراية، فما ينعكس تلقائيًا.
+///   `mic` / `stop`              → بلا اتجاه أصلًا، ما تُعكس.
+///
+/// فالعكس اليدوي مقصور على «تشغيل» وحدها. الزر نص واجهة لا محتوى مستخدم،
+/// فيتبع لغة التطبيق (`Directionality`) لا لغة التسجيل.
+class _StateIcon extends StatelessWidget {
+  const _StateIcon({required this.isRecording, required this.isPaused});
+
+  final bool isRecording;
+  final bool isPaused;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = Icon(
+      isRecording
+          ? Icons.stop_rounded
+          : (isPaused ? Icons.play_arrow_rounded : Icons.mic_rounded),
+      color: Colors.white,
+      size: 34,
+    );
+
+    final mirror = isPaused &&
+        Directionality.of(context) == TextDirection.rtl;
+
+    return mirror
+        ? Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()..scaleByDouble(-1, 1, 1, 1),
+            child: icon,
+          )
+        : icon;
   }
 }

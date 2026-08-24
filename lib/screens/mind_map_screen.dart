@@ -368,8 +368,9 @@ class _MindMapScreenState extends State<MindMapScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF161616).withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(20),
+        // كانت #161616 مكتوبة حرفيًا. Crimson: بطاقات بزوايا 1rem.
+        color: MindropColors.surface.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: node.color.withValues(alpha: 0.55)),
       ),
       child: Column(
