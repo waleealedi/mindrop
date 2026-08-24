@@ -9,6 +9,13 @@
   "hintRecording": "Recording — tap to stop",
   "hintPaused": "Paused — tap to resume",
 
+  "recordStatusIdle": "Ready to capture…",
+  "@recordStatusIdle": {
+    "description": "Headline above the record button's hint line while idle"
+  },
+  "recordStatusRecording": "Listening…",
+  "recordStatusPaused": "On hold",
+
   "savedLocally": "Your idea is saved on this device",
   "recordStartFailed": "Couldn't start recording. Try again.",
   "recordNotSaved": "The recording wasn't saved",

@@ -10,9 +10,9 @@ class PulseRings extends StatefulWidget {
     super.key,
     required this.child,
     required this.active,
+    required this.color,
     this.level = 0,
-    this.color = const Color(0xFFFF7A1A),
-    this.ringCount = 4,
+    this.ringCount = 2,
     this.startRadius = 46,
     this.endRadius = 118,
   });
@@ -23,7 +23,13 @@ class PulseRings extends StatefulWidget {
   /// مستوى الصوت (0..1) — يزيد وضوح الحلقات مع ارتفاع الصوت.
   final double level;
 
+  /// **مطلوب عمدًا.** كان له افتراضي `Color(0xFFFF7A1A)` مكتوب حرفيًا —
+  /// وهذا يخالف قاعدة «الألوان من MindropColors فقط»، وكان يمر بصمت لأن
+  /// المستدعي الوحيد ما يمرّر لونًا أصلًا. جعله مطلوبًا يمنع تكرارها.
   final Color color;
+
+  /// حلقتان، حسب تصدير Stitch (`inset-0` و`inset-4` بإزاحة نصف ثانية).
+  /// كانت أربعًا: الفرق إن الأربع تقرأ كموجة متصلة، والاثنتين كنبضة أوضح.
   final int ringCount;
 
   /// نصف القطر الذي تولد عنده الحلقة (عادة = نصف قطر الزر).

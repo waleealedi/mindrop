@@ -5,9 +5,15 @@ import '../l10n/app_localizations.dart';
 import '../services/audio_recorder_service.dart';
 import '../theme/app_theme.dart';
 
-/// زر التسجيل الأساسي: دائرة برتقالية متوهجة كبيرة.
+/// زر التسجيل الأساسي: قطرة عضوية متوهجة كبيرة.
 ///
-/// ثلاث سلوكيات مقصودة من وثيقة الهوية:
+/// **شكل القطرة من تصدير Stitch** (`record_screen`): أنصاف أقطار غير
+/// متساوية لكل زاوية (`border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%`)
+/// تعطي كتلة غير منتظمة تقرأ كقطرة لا كزر. تنشدّ لدائرة كاملة عند الضغط
+/// (`:active { border-radius: 50% }`) — تفصيلة لمسية رخيصة: الشكل يستجيب
+/// للإصبع قبل ما يبدأ التسجيل أصلًا.
+///
+/// ثلاث سلوكيات مقصودة من وثيقة الهوية، **كلها موجودة من قبل هذا التصدير**:
 /// 1) Breathing Animation — بوضع الانتظار يتنفّس الهالة ببطء ليوحي
 ///    بالجاهزية الفورية بدون ما يشتّت.
 /// 2) تفاعل مع الصوت — أثناء التسجيل الهالة تنبض حسب [level] الحقيقي
@@ -28,6 +34,27 @@ class RecordButton extends StatefulWidget {
   /// مستوى الصوت الحالي مطبَّعًا بين 0 و1.
   final double level;
 
+  /// أنصاف أقطار القطرة، منسوبة لضلع الزر.
+  ///
+  /// نفس أرقام Stitch بالترتيب: أفقي (TL TR BR BL) ثم رأسي (TL TR BR BL).
+  /// [morph] من 0 (قطرة) إلى 1 (دائرة كاملة).
+  static BorderRadius dropletRadius(double side, double morph) {
+    Radius r(double hx, double vy) {
+      const circle = 0.5;
+      return Radius.elliptical(
+        side * (hx + (circle - hx) * morph),
+        side * (vy + (circle - vy) * morph),
+      );
+    }
+
+    return BorderRadius.only(
+      topLeft: r(0.40, 0.40),
+      topRight: r(0.60, 0.50),
+      bottomRight: r(0.70, 0.60),
+      bottomLeft: r(0.30, 0.50),
+    );
+  }
+
   @override
   State<RecordButton> createState() => _RecordButtonState();
 }
@@ -38,6 +65,9 @@ class _RecordButtonState extends State<RecordButton>
 
   /// مستوى مُنعَّم: يمنع اهتزاز الهالة العشوائي بين عينة وأخرى.
   double _smoothLevel = 0;
+
+  /// الإصبع على الزر الآن — يشدّ القطرة لدائرة.
+  bool _pressed = false;
 
   @override
   void initState() {
@@ -67,6 +97,11 @@ class _RecordButtonState extends State<RecordButton>
     widget.onTap();
   }
 
+  void _setPressed(bool v) {
+    if (_pressed == v) return;
+    setState(() => _pressed = v);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRecording = widget.state == RecorderState.recording;
@@ -79,6 +114,11 @@ class _RecordButtonState extends State<RecordButton>
       label: isRecording ? t.a11yStopRecording : t.a11yStartRecording,
       child: GestureDetector(
         onTap: _handleTap,
+        // الضغط يُلتقط منفصلًا عن النقر عشان الشكل يستجيب أثناء الضغط
+        // نفسه، لا بعد رفع الإصبع.
+        onTapDown: (_) => _setPressed(true),
+        onTapUp: (_) => _setPressed(false),
+        onTapCancel: () => _setPressed(false),
         behavior: HitTestBehavior.opaque,
         child: SizedBox(
           width: 150,
@@ -93,6 +133,10 @@ class _RecordButtonState extends State<RecordButton>
               final haloOpacity =
                   (isRecording ? 0.30 : 0.15) + pulse * 0.18;
 
+              final side = isRecording ? 82.0 : 92.0;
+              // الضغط والتسجيل كلاهما يعطي دائرة كاملة.
+              final morph = (_pressed || isRecording) ? 1.0 : 0.0;
+
               return Stack(
                 alignment: Alignment.center,
                 children: [
@@ -105,8 +149,10 @@ class _RecordButtonState extends State<RecordButton>
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
                           colors: [
-                            MindropColors.accent.withValues(alpha: haloOpacity),
-                            MindropColors.accent.withValues(alpha: 0),
+                            MindropColors.stitchPrimaryContainer
+                                .withValues(alpha: haloOpacity),
+                            MindropColors.stitchPrimaryContainer
+                                .withValues(alpha: 0),
                           ],
                         ),
                       ),
@@ -115,28 +161,34 @@ class _RecordButtonState extends State<RecordButton>
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 320),
                     curve: Curves.easeOutCubic,
-                    width: isRecording ? 82 : 92,
-                    height: isRecording ? 82 : 92,
+                    width: side,
+                    height: side,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      // دائرة بوضع الانتظار، تتحول لمربع مدوّر عند
-                      // التسجيل — نفس المكان بالضبط، فما يحتاج المستخدم
-                      // يعيد تحديد مكان الزر بعينه عشان يوقف.
-                      borderRadius:
-                          BorderRadius.circular(isRecording ? 26 : 46),
+                      // قطرة غير منتظمة بالانتظار، تنشدّ لدائرة كاملة عند
+                      // الضغط أو أثناء التسجيل — نفس المكان والمركز بالضبط،
+                      // فما يحتاج المستخدم يعيد تحديد مكان الزر عشان يوقف.
+                      // الأيقونة (مايك/إيقاف) تبقى الإشارة الأصرح للحالة،
+                      // فالشكل يضيف لها ولا يحمل المعنى وحده.
+                      borderRadius: RecordButton.dropletRadius(side, morph),
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          MindropColors.accentSoft,
-                          MindropColors.accent,
+                          MindropColors.stitchPrimaryContainer,
+                          MindropColors.stitchSecondary,
                         ],
+                      ),
+                      // مقابل `inset 0 0 20px rgba(255,255,255,.1)` عند
+                      // Stitch — حافة رفيعة بدل ظل داخلي (Flutter ما يدعمه).
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.10),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: MindropColors.accent
-                              .withValues(alpha: 0.40 + pulse * 0.22),
-                          blurRadius: 26 + pulse * 20,
+                          color: MindropColors.stitchPrimaryContainer
+                              .withValues(alpha: 0.34 + pulse * 0.22),
+                          blurRadius: 30 + pulse * 20,
                           spreadRadius: pulse * 4,
                         ),
                       ],

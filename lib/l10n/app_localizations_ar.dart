@@ -18,6 +18,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get hintPaused => 'متوقف مؤقتًا — اضغط للمتابعة';
 
   @override
+  String get recordStatusIdle => 'جاهز لالتقاط فكرتك…';
+
+  @override
+  String get recordStatusRecording => 'أسمعك…';
+
+  @override
+  String get recordStatusPaused => 'بانتظارك';
+
+  @override
   String get savedLocally => 'تم حفظ فكرتك محليًا';
 
   @override

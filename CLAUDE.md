@@ -264,6 +264,58 @@ nothing about it. Only a human can confirm it — don't claim it works.
 
 ---
 
+## Record screen
+
+The home screen, and the one place the app must stay one tap from recording.
+**Most of its motion predates the Stitch export** — the breathing button, the
+level-reactive halo, the pulse rings and the organic wave all shipped with the
+MVP. The Stitch pass was a recolour and a reshape on working code, not a rebuild.
+Read [record_screen.dart](lib/screens/record_screen.dart) and the three widgets
+it composes before assuming any of it is new.
+
+What the Stitch pass actually changed:
+
+- **The button is a droplet.** Per-corner elliptical radii straight from the
+  export (`40% 60% 70% 30% / 40% 50% 60% 50%`), in `RecordButton.dropletRadius`.
+  It pulls to a full circle on press *and* while recording — `AnimatedContainer`
+  lerps the whole `BorderRadius`, so no separate animation drives it.
+- **Press is tracked separately from tap** (`onTapDown`/`onTapUp`/`onTapCancel`),
+  so the shape answers the finger before recording starts. The icon (mic ↔ stop)
+  is still the primary state signal; shape only reinforces it.
+- **Gradient and glow moved to the Bio-Digital roles** —
+  `stitchPrimaryContainer → stitchSecondary`. This displaces the orange that
+  `MindropColors.accent` still describes as "the record button" colour. The token
+  comment is now narrower than the truth; the orange survives elsewhere.
+- **Pulse rings: two, not four, and indigo.** Two read as a pulse, four as a
+  continuous wave. `PulseRings.color` is now **required** — it used to default to
+  a hardcoded `Color(0xFFFF7A1A)`, which broke the MindropColors-only rule and
+  passed unnoticed because the single caller never passed a colour.
+- **Status is two lines**: a headline saying *where you are*, and the original
+  hint line saying *what to do*. The hint strings are unchanged, so
+  [widget_test.dart](test/widget_test.dart) still finds them.
+
+### Glass here is allowed — don't "fix" it
+
+The dock and the pending chip are real `GlassContainer`s (`BackdropFilter`), and
+that is fine: this is the static screen the Performance rule carves out, and what
+sits behind them is `AmbientBackground`'s gradient, which does not repaint per
+frame. The mind map's no-blur rule exists because *that* canvas repaints on every
+finger movement — it is not a blanket ban on the app.
+
+Two consequences worth knowing before adding anything here:
+
+- The Stitch export puts the status caption on its own glass panel. **The dock
+  already is that panel**, so the caption went inside it — a translucent panel
+  nested in a translucent panel is worse than either. No blur was added.
+- [organic_waveform.dart](lib/widgets/organic_waveform.dart) uses
+  `MaskFilter.blur` for its glow. That is a *shape* blur, not a backdrop read,
+  and it predates all of this. Different thing, different cost — leave it.
+
+Out of scope and deliberately not built: the export's bottom nav, settings entry
+and profile avatar. Mindrop has no screens behind any of them.
+
+---
+
 ## Cloud writes vs deletes — opposite policies on purpose
 
 **Writes are best-effort and fail silently.** Local work must never be blocked by

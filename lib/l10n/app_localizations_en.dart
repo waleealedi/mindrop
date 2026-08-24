@@ -18,6 +18,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hintPaused => 'Paused — tap to resume';
 
   @override
+  String get recordStatusIdle => 'Ready to capture…';
+
+  @override
+  String get recordStatusRecording => 'Listening…';
+
+  @override
+  String get recordStatusPaused => 'On hold';
+
+  @override
   String get savedLocally => 'Your idea is saved on this device';
 
   @override

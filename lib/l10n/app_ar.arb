@@ -5,6 +5,10 @@
   "hintRecording": "جارٍ التسجيل — اضغط للإيقاف",
   "hintPaused": "متوقف مؤقتًا — اضغط للمتابعة",
 
+  "recordStatusIdle": "جاهز لالتقاط فكرتك…",
+  "recordStatusRecording": "أسمعك…",
+  "recordStatusPaused": "بانتظارك",
+
   "savedLocally": "تم حفظ فكرتك محليًا",
   "recordStartFailed": "تعذّر بدء التسجيل، حاول مرة ثانية",
   "recordNotSaved": "لم يتم حفظ التسجيل",

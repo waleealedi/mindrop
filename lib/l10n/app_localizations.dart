@@ -116,6 +116,24 @@ abstract class AppLocalizations {
   /// **'Paused — tap to resume'**
   String get hintPaused;
 
+  /// Headline above the record button's hint line while idle
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to capture…'**
+  String get recordStatusIdle;
+
+  /// No description provided for @recordStatusRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening…'**
+  String get recordStatusRecording;
+
+  /// No description provided for @recordStatusPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'On hold'**
+  String get recordStatusPaused;
+
   /// No description provided for @savedLocally.
   ///
   /// In en, this message translates to:

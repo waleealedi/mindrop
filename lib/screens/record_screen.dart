@@ -525,6 +525,9 @@ class _RecordScreenState extends State<RecordScreen>
   Widget _buildDock({required bool isRecording, required bool isPaused}) {
     final t = AppLocalizations.of(context)!;
 
+    final status = isRecording
+        ? t.recordStatusRecording
+        : (isPaused ? t.recordStatusPaused : t.recordStatusIdle);
     final hint =
         isRecording ? t.hintRecording : (isPaused ? t.hintPaused : t.hintIdle);
 
@@ -542,22 +545,46 @@ class _RecordScreenState extends State<RecordScreen>
               active: isRecording,
               level: _level,
               endRadius: 96,
+              color: MindropColors.stitchPrimaryContainer,
               child: RecordButton(
                 state: _state,
                 level: _level,
                 onTap: _handleTap,
               ),
             ),
+            // سطران بدل سطر — بنية Stitch للحالة: عنوان يقول **أين أنت**،
+            // وسطر أصغر يقول **ماذا تفعل**. السطر الثاني هو نص التلميح
+            // القديم نفسه بلا تغيير، فما ضاع شي وما تكرر شي.
+            //
+            // ملاحظة على «لوحة زجاجية»: تصدير Stitch يضع هذي الحالة على
+            // لوحة مستقلة. هنا الدوك **هو** تلك اللوحة أصلًا، فلو أضفنا
+            // حاوية ثانية داخله لطلعت لوحة داخل لوحة. ما أضفنا أي ضباب
+            // جديد ولا حاوية جديدة.
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
-              child: Text(
-                hint,
-                key: ValueKey(hint),
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                  color: MindropColors.textSecondary,
-                ),
+              child: Column(
+                key: ValueKey(status),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    status,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.16,
+                      color: MindropColors.stitchPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    hint,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                      color: MindropColors.stitchOnSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
