@@ -78,9 +78,14 @@ class MindropColors {
   static const stitchError = Color(0xFFFFB4AB);
 }
 
-/// خطوط الهوية — Geist للاتيني و IBM Plex Sans Arabic للعربي، حسب تصدير Stitch.
+/// خطوط الهوية — Urbanist للاتيني و IBM Plex Sans Arabic للعربي.
 ///
-/// **نظام سكربتين مقصود:** Geist ما فيه محارف عربية أصلًا، فنمرّره عائلةً
+/// **ليش Urbanist مو Geist:** تصدير Stitch يقترح Geist، لكن Urbanist خط
+/// الهوية من وثيقة التصميم الأصلية ومن قبل التصدير. اقتراح أداة تصميم ما
+/// يلغي هوية قائمة، فالتصدير يعطينا اللون والشكل لا العائلة النصية.
+/// (كانت النسخة السابقة بدّلت الاثنين لـ Geist — تصحيح مقصود.)
+///
+/// **نظام سكربتين مقصود:** Urbanist ما فيه محارف عربية، فنمرّره عائلةً
 /// أساسية ونحط العربي بـ `fontFamilyFallback`. المحرك يختار العائلة حسب
 /// المحرف نفسه، فالجملة المخلوطة (عربي + إنجليزي بنفس السطر — وهي الحالة
 /// الطبيعية عند مستخدم Mindrop) تطلع بكل سكربت على خطه بلا أي تبديل يدوي.
@@ -90,7 +95,7 @@ class MindropColors {
 class MindropFonts {
   const MindropFonts._();
 
-  static final String? latin = GoogleFonts.geist().fontFamily;
+  static final String? latin = GoogleFonts.urbanist().fontFamily;
   static final String? arabic = GoogleFonts.ibmPlexSansArabic().fontFamily;
 
   /// قائمة الاحتياط جاهزة للتمرير لأي `TextStyle`.
@@ -127,25 +132,25 @@ class MindropTheme {
   ///
   /// `TextTheme.apply` يحافظ على `fontFamilyFallback` القائم، فترتيب
   /// الخطوتين (احتياط ثم ألوان) آمن.
-  static TextTheme _dualScript(TextTheme geist) {
+  static TextTheme _dualScript(TextTheme base) {
     TextStyle? f(TextStyle? s) =>
         s?.copyWith(fontFamilyFallback: MindropFonts.fallback);
     return TextTheme(
-      displayLarge: f(geist.displayLarge),
-      displayMedium: f(geist.displayMedium),
-      displaySmall: f(geist.displaySmall),
-      headlineLarge: f(geist.headlineLarge),
-      headlineMedium: f(geist.headlineMedium),
-      headlineSmall: f(geist.headlineSmall),
-      titleLarge: f(geist.titleLarge),
-      titleMedium: f(geist.titleMedium),
-      titleSmall: f(geist.titleSmall),
-      bodyLarge: f(geist.bodyLarge),
-      bodyMedium: f(geist.bodyMedium),
-      bodySmall: f(geist.bodySmall),
-      labelLarge: f(geist.labelLarge),
-      labelMedium: f(geist.labelMedium),
-      labelSmall: f(geist.labelSmall),
+      displayLarge: f(base.displayLarge),
+      displayMedium: f(base.displayMedium),
+      displaySmall: f(base.displaySmall),
+      headlineLarge: f(base.headlineLarge),
+      headlineMedium: f(base.headlineMedium),
+      headlineSmall: f(base.headlineSmall),
+      titleLarge: f(base.titleLarge),
+      titleMedium: f(base.titleMedium),
+      titleSmall: f(base.titleSmall),
+      bodyLarge: f(base.bodyLarge),
+      bodyMedium: f(base.bodyMedium),
+      bodySmall: f(base.bodySmall),
+      labelLarge: f(base.labelLarge),
+      labelMedium: f(base.labelMedium),
+      labelSmall: f(base.labelSmall),
     );
   }
 
@@ -162,9 +167,10 @@ class MindropTheme {
         primary: MindropColors.accent,
         secondary: MindropColors.neonTeal,
       ),
-      // Geist + IBM Plex Sans Arabic. تُجلب أول مرة وتُخزَّن محليًا، وإذا
+      // Urbanist + IBM Plex Sans Arabic. تُجلب أول مرة وتُخزَّن محليًا، وإذا
       // تعذّر ذلك يرجع Flutter لخط النظام بدون ما ينكسر شي.
-      textTheme: _dualScript(GoogleFonts.geistTextTheme(base.textTheme)).apply(
+      textTheme:
+          _dualScript(GoogleFonts.urbanistTextTheme(base.textTheme)).apply(
         bodyColor: MindropColors.textPrimary,
         displayColor: MindropColors.textPrimary,
       ),

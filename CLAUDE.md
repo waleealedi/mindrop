@@ -95,11 +95,15 @@ replace it with `usesCleartextTraffic="true"`; that opens HTTP to every host.
 - Arabic plurals need all six ICU forms (`zero/one/two/few/many/other`).
   `pendingUploads` is the only one today; [widget_test.dart:69](test/widget_test.dart:69)
   fails if someone collapses it to `other`.
-- **Fonts are dual-script**: Geist (Latin) with IBM Plex Sans Arabic as
+- **Fonts are dual-script**: **Urbanist** (Latin) with IBM Plex Sans Arabic as
   `fontFamilyFallback`, both via `google_fonts`, defined once in `MindropFonts`.
-  Geist has no Arabic glyphs, so the engine picks per-character — a mixed
+  Urbanist has no Arabic glyphs, so the engine picks per-character — a mixed
   Arabic/English sentence renders each script in its own face with no switching
-  logic. Source: the Stitch export's type spec.
+  logic.
+  **Urbanist is the identity font and a design-tool export does not override it.**
+  The Stitch export proposes Geist; it was adopted app-wide for one commit and
+  then reverted. Take colour and shape from an export, not the typeface. The
+  Arabic fallback came from the same export and is kept — it filled a real gap.
 - **`TextPainter` inherits no font.** Inside a `CustomPainter` there is no theme,
   so a `TextStyle` without an explicit `fontFamily` silently renders in the
   platform default, not the brand face. This was live for the whole mind map
