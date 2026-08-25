@@ -11,6 +11,7 @@ import '../services/draft_store.dart';
 import '../services/firestore_sync_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ambient_background.dart';
+import '../widgets/mini_waveform.dart';
 import '../widgets/transcript_text.dart';
 import 'playback_screen.dart';
 
@@ -146,9 +147,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              // نفس أحمر حالة "فشل الرفع" بالأسفل — نلوّن فعل الحذف
-              // الجماعي بلون تحذير عمدًا، أقوى بصريًا من زر الحذف العادي.
-              backgroundColor: const Color(0xFFFF6B6B),
+              // نفس أحمر حالة "فشل الرفع" — نلوّن فعل الحذف الجماعي بلون
+              // تحذير عمدًا، أقوى بصريًا من زر الحذف العادي.
+              backgroundColor: MindropColors.errorRed,
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(t.deleteAll),
@@ -179,46 +180,51 @@ class _HistoryScreenState extends State<HistoryScreen> {
     AppLocalizations t,
   ) {
     switch (status) {
+      // Crimson نظام لهجة واحدة + محايدات، فما نقدر نعطي كل حالة لونًا
+      // مستقلًا مثل قبل. التمييز يبقى قائمًا لأن **الأيقونة والنص** هما
+      // الإشارة الأساسية أصلًا (قاعدة: اللون ما هو الإشارة الوحيدة أبدًا):
+      // محايد = بانتظار، قرمزي فاتح = ماشي، قرمزي حيّ = شغل جارٍ الآن،
+      // أبيض = خلص، أحمر = فشل.
       case RecordingStatus.recorded:
         return (
           icon: Icons.schedule,
-          color: MindropColors.textSecondary,
+          color: MindropColors.crimsonOutline,
           label: t.statusRecorded,
         );
       case RecordingStatus.uploading:
         return (
           icon: Icons.cloud_upload,
-          color: MindropColors.neonBlue,
+          color: MindropColors.crimsonPrimary,
           label: t.statusUploading,
         );
       case RecordingStatus.uploaded:
         return (
           icon: Icons.cloud_done_outlined,
-          color: MindropColors.neonTeal,
+          color: MindropColors.crimsonPrimary,
           label: t.statusUploaded,
         );
       case RecordingStatus.transcribing:
         return (
           icon: Icons.graphic_eq,
-          color: MindropColors.neonBlue,
+          color: MindropColors.crimsonPrimaryContainer,
           label: t.statusTranscribing,
         );
       case RecordingStatus.analyzing:
         return (
           icon: Icons.auto_awesome,
-          color: MindropColors.accent,
+          color: MindropColors.crimsonPrimaryContainer,
           label: t.statusAnalyzing,
         );
       case RecordingStatus.completed:
         return (
           icon: Icons.check_circle_outline,
-          color: MindropColors.neonTeal,
+          color: MindropColors.crimsonOnSurface,
           label: t.statusCompleted,
         );
       case RecordingStatus.failed:
         return (
           icon: Icons.error_outline,
-          color: const Color(0xFFFF6B6B),
+          color: MindropColors.errorRed,
           label: t.statusFailed,
         );
     }
@@ -255,7 +261,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           IconButton(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_rounded),
-            color: MindropColors.textPrimary,
+            color: MindropColors.crimsonOnSurface,
             // نص جاهز ومترجم من Flutter نفسه — ما يحتاج مفتاح ترجمة خاص.
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           ),
@@ -265,7 +271,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             style: const TextStyle(
               fontSize: 21,
               fontWeight: FontWeight.w700,
-              color: MindropColors.textPrimary,
+              color: MindropColors.crimsonOnSurface,
             ),
           ),
           const Spacer(),
@@ -274,7 +280,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             IconButton(
               onPressed: _confirmDeleteAll,
               icon: const Icon(Icons.delete_sweep_outlined),
-              color: MindropColors.textSecondary,
+              color: MindropColors.crimsonOnSurfaceVariant,
               tooltip: t.deleteAll,
             ),
         ],
@@ -297,7 +303,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: MindropColors.textSecondary,
+              color: MindropColors.crimsonOnSurfaceVariant,
             ),
           ),
         ),
@@ -306,10 +312,58 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     final localeName = Localizations.localeOf(context).toString();
 
+    // نبني قائمة مسطّحة فيها عناوين المجموعات بين البطاقات، بدل قائمة
+    // متداخلة: `ListView.builder` يبقى كسولًا فما نخسر أداء التمرير.
+    final rows = <_Row>[];
+    String? lastGroup;
+    for (final d in _drafts) {
+      final g = _groupLabel(d.createdAt, t, localeName);
+      if (g != lastGroup) {
+        rows.add(_Row.header(g));
+        lastGroup = g;
+      }
+      rows.add(_Row.tile(d));
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      itemCount: _drafts.length,
-      itemBuilder: (context, i) => _buildTile(_drafts[i], t, localeName),
+      itemCount: rows.length,
+      itemBuilder: (context, i) {
+        final row = rows[i];
+        final draft = row.draft;
+        if (draft == null) return _buildGroupHeader(row.label!, i == 0);
+        return _buildTile(draft, t, localeName);
+      },
+    );
+  }
+
+  /// عنوان المجموعة: «اليوم» و«أمس» بنص مترجم، وأي شي أقدم بتاريخه المنسّق.
+  ///
+  /// نقارن **بالأيام التقويمية** لا بفارق الساعات: تسجيل الساعة 11 مساءً
+  /// وآخر الساعة 1 صباحًا بينهما ساعتان لكنهما يومان مختلفان عند المستخدم.
+  String _groupLabel(DateTime at, AppLocalizations t, String localeName) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(at.year, at.month, at.day);
+    final diff = today.difference(day).inDays;
+    if (diff == 0) return t.historyToday;
+    if (diff == 1) return t.historyYesterday;
+    return DateFormat.yMMMd(localeName).format(at);
+  }
+
+  Widget _buildGroupHeader(String label, bool first) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(4, first ? 8 : 20, 4, 10),
+      child: Text(
+        label.toUpperCase(),
+        // `label-sm` عند Stitch: أحادي العرض، صغير، متباعد الحروف.
+        style: MindropFonts.monoStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 1.6,
+          color: MindropColors.crimsonOutline,
+        ),
+      ),
     );
   }
 
@@ -337,18 +391,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final date = DateFormat.yMMMd(localeName).format(createdAt);
     final time = DateFormat.jm(localeName).format(createdAt);
 
-    const metaStyle = TextStyle(
-      fontSize: 12.5,
-      fontWeight: FontWeight.w500,
-      color: MindropColors.textSecondary,
+    // المدة والتاريخ قراءة بيانات — JetBrains Mono، نفس قاعدة تايمر التسجيل.
+    final metaStyle = MindropFonts.monoStyle(
+      fontSize: 11.5,
+      fontWeight: FontWeight.w400,
+      color: MindropColors.crimsonOutline,
     );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: MindropColors.glass.withValues(alpha: 0.26),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: MindropColors.glassBorder),
+        // Crimson: بطاقات بزوايا 1rem على السطح المرتفع. حاوية عادية لا
+        // زجاجية — القاعدة نفسها: ما فيه ضباب داخل قائمة تتمرّر.
+        color: MindropColors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: visual.color.withValues(alpha: 0.18),
+        ),
       ),
       // يقصّ تموّج الضغط (ink) على الزوايا الدائرية بدل ما يطلع مربعًا.
       clipBehavior: Clip.antiAlias,
@@ -404,25 +463,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 // مهما طال التفريغ أو اختلف اتجاهه، فما
                                 // ينكسر التخطيط ولا يتأثر أداء التمرير.
                                 maxLines: 2,
-                                style: const TextStyle(
+                                style: MindropFonts.style(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w600,
                                   height: 1.35,
-                                  color: MindropColors.textPrimary,
+                                  color: MindropColors.crimsonOnSurface,
                                 ),
                               )
                             else
                               Text(
                                 visual.label,
-                                style: const TextStyle(
+                                style: MindropFonts.style(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w600,
-                                  color: MindropColors.textPrimary,
+                                  color: MindropColors.crimsonOnSurface,
                                 ),
                               ),
                             const SizedBox(height: 4),
                             Row(
                               children: [
+                                // توقيع بصري يقول «هذا مقطع صوتي» — زخرفة
+                                // حتمية لا قراءة للموجة، راجع [MiniWaveform].
+                                MiniWaveform(
+                                  seed: draft.id,
+                                  muted: !(remote?.hasTranscript ?? false),
+                                ),
+                                const SizedBox(width: 10),
                                 Text(
                                   _formatDuration(
                                       Duration(milliseconds: draft.durationMs)),
@@ -435,9 +501,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 Container(
                                   width: 3,
                                   height: 3,
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: MindropColors.textSecondary,
+                                    color: MindropColors.crimsonOutline
+                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
                                 const SizedBox(width: 7),
@@ -467,7 +534,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onPressed: () => _confirmDelete(draft),
               icon: const Icon(Icons.delete_outline),
               iconSize: 21,
-              color: MindropColors.textSecondary,
+              color: MindropColors.crimsonOnSurfaceVariant,
               tooltip: t.delete,
               visualDensity: VisualDensity.compact,
             ),
@@ -476,4 +543,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
   }
+}
+
+/// صف بالقائمة: إما عنوان مجموعة وإما بطاقة تسجيل، لا الاثنان.
+class _Row {
+  const _Row.header(this.label) : draft = null;
+  const _Row.tile(this.draft) : label = null;
+
+  final String? label;
+  final RecordingDraft? draft;
 }

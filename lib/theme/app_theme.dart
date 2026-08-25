@@ -46,6 +46,11 @@ class MindropColors {
   /// on-surface-variant — نص ثانوي، فيه دفء ورديّ خفيف.
   static const crimsonOnSurfaceVariant = Color(0xFFE5BDBE);
 
+  /// inverse-primary — قرمزي غامق مكتوم. الدرجة الثالثة بالعائلة، تحتاجها
+  /// الموجة العضوية: ثلاثة أشرطة تحتاج ثلاث درجات متمايزة، والتصدير يوفّرها
+  /// (`inverse-primary`) فما نخترع شيئًا.
+  static const crimsonDeep = Color(0xFFBE0037);
+
   /// outline — حدود ومحايد.
   static const crimsonOutline = Color(0xFFAC8889);
 
@@ -73,22 +78,11 @@ class MindropColors {
   /// أحمر رسائل الخطأ. كان مكتوبًا حرفيًا داخل شاشة التسجيل.
   static const errorRed = Color(0xFFFF6B6B);
 
-  // -------------------------------------------------- ألوان الموجة العضوية
-  //
-  // أشرطة الموجة بشاشة التسجيل كانت ترسم قيمًا حرفية داخل الودجت — نفس صنف
-  // الخلل اللي وُجد بـ `PulseRings.color`. نُقلت هنا **كما هي بلا تغيير
-  // لهجة**: تلوينها قرمزيًا قرار تصميمي ما يحدّده تصدير Crimson، فيحتاج
-  // تمريرة مستقلة.
-  static const waveTeal = Color(0xFF2EE6C5);
-  static const waveBlue = Color(0xFF4C8DFF);
-  static const waveLime = Color(0xFF3BE08F);
-  static const wavePink = Color(0xFFFF7A9E);
-  static const waveAmber = Color(0xFFFFA24D);
-
   // ---------------------------------------------------- موروث قبل التحوّل
   //
-  // شاشتا «أفكارك» والاستماع لسا تستعملهما، وهما خارج نطاق هذي الجولة.
-  // تبقى لين تشملهما تمريرة لاحقة — حذفها الآن يكسر شاشتين شغّالتين.
+  // **شاشة الاستماع وحدها** لسا تستعملها بعد تحوّل شاشة الأفكار. تبقى لين
+  // تشملها تمريرة لاحقة — حذفها الآن يكسر شاشة شغّالة.
+  // (`glass` يستعملها كمان `GlassContainer` المشتركة.)
   static const accent = Color(0xFFFF7A1A);
   static const accentSoft = Color(0xFFFFA24D);
   static const neonTeal = Color(0xFF2EE6C5);

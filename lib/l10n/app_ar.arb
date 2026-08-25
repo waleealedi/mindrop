@@ -26,6 +26,9 @@
   "pendingUploads": "{count, plural, zero{لا شيء بانتظار الرفع} one{تسجيل واحد بانتظار الرفع} two{تسجيلان بانتظار الرفع} few{{count} تسجيلات بانتظار الرفع} many{{count} تسجيلًا بانتظار الرفع} other{{count} تسجيل بانتظار الرفع}}",
 
   "historyTitle": "أفكارك",
+  "historyToday": "اليوم",
+  "historyYesterday": "أمس",
+
   "historyEmpty": "لسا ما سجّلت أي فكرة",
   "historyOpenTooltip": "عرض الأفكار المسجّلة",
 

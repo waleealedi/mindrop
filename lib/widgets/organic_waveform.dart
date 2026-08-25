@@ -129,18 +129,23 @@ class _OrganicWavePainter extends CustomPainter {
   final double level;
   final bool active;
 
-  /// ألوان الأشرطة **بلا تغيير لهجة بتحوّل Crimson** — نُقلت من قيم حرفية
-  /// داخل هذا الملف إلى [MindropColors] فقط. صبغها قرمزيًا قرار تصميمي ما
-  /// يحدّده تصدير Crimson (نظامه لهجة واحدة، والموجة ثلاثة أشرطة متمايزة)،
-  /// فيحتاج تمريرة Stitch مستقلة لا اجتهادًا هنا.
+  /// **ثلاث درجات داخل عائلة القرمزي، لا ثلاثة ألوان مختلفة.**
+  ///
+  /// الجولة السابقة تركتها فيروزي/أزرق/برتقالي لأن نظام Crimson لهجة واحدة
+  /// وما فيه ثلاثية جاهزة تُنسخ. الحل هنا تدرّج داخل العائلة نفسها:
+  /// `primary-container` الحيّ، `primary` الفاتح، `inverse-primary` الغامق —
+  /// الثلاثة من التصدير، ولا واحد مخترع.
+  ///
+  /// ما نسخنا معالجة Stitch للموجة: تصديره شريط تقدّم مسطّح بدرجتين، وهذا
+  /// كائن عضوي بثلاثة أشرطة متداخلة. الأشكال والحركة كما هي، اللون وحده تغيّر.
   ///
   /// ترددات وسرعات غير متناسبة عمدًا (2.0 / 3.1 / 2.6 و 1.0 / -0.72 / 0.5)
   /// عشان الأشرطة ما ترجع لنفس الوضع بشكل دوري ملحوظ — الحركة تبين
   /// عضوية بدل ما تبين حلقة مكررة.
   static const _ribbons = <_Ribbon>[
     _Ribbon(
-      from: MindropColors.waveTeal,
-      to: MindropColors.waveBlue,
+      from: MindropColors.crimsonPrimaryContainer,
+      to: MindropColors.crimsonPrimary,
       freq: 2.0,
       phase: 0.0,
       speed: 1.0,
@@ -148,8 +153,8 @@ class _OrganicWavePainter extends CustomPainter {
       thickness: 0.085,
     ),
     _Ribbon(
-      from: MindropColors.waveLime,
-      to: MindropColors.waveTeal,
+      from: MindropColors.crimsonDeep,
+      to: MindropColors.crimsonPrimaryContainer,
       freq: 3.1,
       phase: 1.7,
       speed: -0.72,
@@ -157,8 +162,8 @@ class _OrganicWavePainter extends CustomPainter {
       thickness: 0.060,
     ),
     _Ribbon(
-      from: MindropColors.wavePink,
-      to: MindropColors.waveAmber,
+      from: MindropColors.crimsonPrimary,
+      to: MindropColors.crimsonDeep,
       freq: 2.6,
       phase: 3.4,
       speed: 0.50,

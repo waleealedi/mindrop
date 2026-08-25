@@ -73,6 +73,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyTitle => 'Your Ideas';
 
   @override
+  String get historyToday => 'Today';
+
+  @override
+  String get historyYesterday => 'Yesterday';
+
+  @override
   String get historyEmpty => 'No ideas recorded yet';
 
   @override

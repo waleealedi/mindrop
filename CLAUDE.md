@@ -242,13 +242,22 @@ Its `DESIGN.md` names 20–24px backdrop blur as a core pillar. Skip it — same
 substitute as always: a `Container` at ~30–40% alpha with a hairline border. The
 no-blur rule predates every export and is backed by measurement.
 
+### The waveform's three tones
+
+`crimsonDeep` `#BE0037` (the export's `inverse-primary`) is the third crimson.
+The organic waveform needs three separable ribbons and Crimson ships one accent,
+so the ramp is **deep → container → primary**, all from the export, none invented.
+The history list's mini waveform walks the same ramp so both places read as one
+family. Stitch's own waveform treatment was not traced — its mockup is a flat
+two-tone progress bar, a different object entirely.
+
 ### Not yet converted
 
-`history_screen` and `playback_screen` still use the pre-Crimson `accent` /
-`accentSoft` / `neonTeal` / `neonBlue` tokens, which is why those constants still
-exist. The organic waveform's ribbon colours were moved out of the widget into
-`wave*` tokens but **deliberately not recoloured** — Crimson has one accent and
-the waveform needs three distinct ribbons; that needs its own Stitch pass.
+**`playback_screen` alone** still uses the pre-Crimson `accent` / `accentSoft` /
+`neonTeal` / `neonBlue` tokens — that is the only reason those constants survive.
+`textPrimary` / `textSecondary` (pure white / grey) are still used for chrome on
+the record and mind-map screens; Crimson's `crimsonOnSurface` is the intended
+replacement, but the difference is subtle and it was left for the playback round.
 
 ---
 
@@ -397,6 +406,55 @@ Two consequences worth knowing before adding anything here:
 
 Out of scope and deliberately not built: the export's bottom nav, settings entry
 and profile avatar. Mindrop has no screens behind any of them.
+
+---
+
+## History screen ("Your Ideas")
+
+A **list, and a detail view that already existed** — `PlaybackScreen`, reached by
+tapping a row, showing waveform, playback, full transcript, analysis and the
+mind-map entry. Anyone briefed to "add a transcript detail view" should check
+this first.
+
+The Crimson pass added:
+
+- **Date group headers** — "Today" / "Yesterday" / formatted date, compared by
+  **calendar day, not elapsed hours** (11pm and 1am are two hours apart and two
+  different days). Headers and rows are flattened into one `_Row` list so
+  `ListView.builder` stays lazy.
+- **A mini waveform per row** — see the honesty note below.
+- Crimson surfaces, `crimsonOutline` mono timestamps, status colours collapsed
+  onto the one-accent system (neutral = waiting, light = moving, vivid = working
+  now, white = done, red = failed). The icon and label still carry the meaning;
+  colour never carries it alone.
+
+### The mini waveform is decoration, and the code says so
+
+It is **not** a rendering of the audio. Heights are hashed deterministically from
+the recording id, so a given recording always looks the same — but nothing about
+the shape reflects what was said.
+
+Two reasons. Drawing the real thing means decoding every audio file inside a
+scrolling list, which the performance rule exists to prevent. And a waveform that
+claims to depict audio while depicting a hash is a small visual lie, in an app
+whose analysis schema has no optional fields precisely so the model cannot invent
+content. Stitch treats it the same way — its own mockup hardcodes the bar heights
+per row.
+
+If you ever wire it to real amplitude data, delete the comment in
+[mini_waveform.dart](lib/widgets/mini_waveform.dart) along with the hash.
+
+### Not built, deliberately
+
+- **Timestamped caption blocks.** Stitch's journal panel splits the transcript
+  into `00:00` / `02:15` blocks. Mindrop cannot: the backend stores
+  `transcript: text` and nothing else. Groq returns per-segment timings in
+  `verbose_json` — the hallucination guard already reads them — but they are
+  discarded. Captions need a backend change, a Firestore schema change, and
+  re-transcription of existing recordings. That is a data feature, not a reskin.
+- **The "Resume Recording" bar.** Pause/resume exists only within a live
+  recording session; there is no resuming a finished one.
+- **The 5-icon bottom nav.** Analytics, settings and profile have no screens.
 
 ---
 

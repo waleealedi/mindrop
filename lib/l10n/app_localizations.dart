@@ -206,6 +206,18 @@ abstract class AppLocalizations {
   /// **'Your Ideas'**
   String get historyTitle;
 
+  /// Date group header above recordings made today, in the ideas list
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get historyToday;
+
+  /// No description provided for @historyYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get historyYesterday;
+
   /// No description provided for @historyEmpty.
   ///
   /// In en, this message translates to:

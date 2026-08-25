@@ -77,6 +77,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get historyTitle => 'أفكارك';
 
   @override
+  String get historyToday => 'اليوم';
+
+  @override
+  String get historyYesterday => 'أمس';
+
+  @override
   String get historyEmpty => 'لسا ما سجّلت أي فكرة';
 
   @override

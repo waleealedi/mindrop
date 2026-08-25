@@ -48,6 +48,12 @@
     "description": "Title of the screen listing previously recorded ideas"
   },
 
+  "historyToday": "Today",
+  "@historyToday": {
+    "description": "Date group header above recordings made today, in the ideas list"
+  },
+  "historyYesterday": "Yesterday",
+
   "historyEmpty": "No ideas recorded yet",
   "historyOpenTooltip": "View recorded ideas",
 
