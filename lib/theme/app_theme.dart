@@ -78,16 +78,6 @@ class MindropColors {
   /// أحمر رسائل الخطأ. كان مكتوبًا حرفيًا داخل شاشة التسجيل.
   static const errorRed = Color(0xFFFF6B6B);
 
-  // ---------------------------------------------------- موروث قبل التحوّل
-  //
-  // **شاشة الاستماع وحدها** لسا تستعملها بعد تحوّل شاشة الأفكار. تبقى لين
-  // تشملها تمريرة لاحقة — حذفها الآن يكسر شاشة شغّالة.
-  // (`glass` يستعملها كمان `GlassContainer` المشتركة.)
-  static const accent = Color(0xFFFF7A1A);
-  static const accentSoft = Color(0xFFFFA24D);
-  static const neonTeal = Color(0xFF2EE6C5);
-  static const neonBlue = Color(0xFF4C8DFF);
-
   // ---------------------------------------------------------------- النص
   static const textPrimary = Color(0xFFFFFFFF);
   static const textSecondary = Color(0xFF9A9AA0);

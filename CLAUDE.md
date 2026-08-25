@@ -19,15 +19,15 @@ feature is in its final state.**
 
 | Area | State |
 |---|---|
-| Record, mind map, history screens | On **Obsidian Crimson** |
-| Playback screen | **Not converted** — still pre-Crimson orange/teal |
+| All four screens — record, mind map, history, playback | On **Obsidian Crimson**, conversion **complete** |
 | Backend (transcribe → analyse) | Working, runs **locally only** |
 | Persistent topics | Code committed, **switched off** (no key) |
 
 Identity went neutral-black+orange → Bio-Digital navy → Crimson. Two of the four
 category colours are still Bio-Digital survivors, on purpose — see **Design
-system**. `MindropColors.accent`/`accentSoft`/`neonTeal`/`neonBlue` exist *only*
-because `playback_screen` still consumes them; when that screen converts, they go.
+system**. `MindropColors.accent`/`accentSoft`/`neonTeal`/`neonBlue` were the last
+pre-Crimson tokens, kept alive only by `playback_screen`; that screen converted,
+so **they are deleted from the theme** and the identity migration is closed.
 
 ### Three switches that are deliberately off
 
@@ -325,13 +325,55 @@ The history list briefly walked this same ramp for a per-row mini waveform; that
 was removed (see **History screen**), and its row glyph now uses the container
 tone alone.
 
-### Not yet converted
+### Conversion is complete — all four screens
 
-**`playback_screen` alone** still uses the pre-Crimson `accent` / `accentSoft` /
-`neonTeal` / `neonBlue` tokens — that is the only reason those constants survive.
-`textPrimary` / `textSecondary` (pure white / grey) are still used for chrome on
-the record and mind-map screens; Crimson's `crimsonOnSurface` is the intended
-replacement, but the difference is subtle and it was left for the playback round.
+`playback_screen` was the last holdout. It is now on Crimson, and
+`MindropColors.accent` / `accentSoft` / `neonTeal` / `neonBlue` are **deleted**.
+A repo-wide `/usr/bin/grep -r` for their hex values (`FF7A1A`, `FFA24D`,
+`2EE6C5`, `4C8DFF`) returns only prose describing the history — one comment in
+[pulse_rings.dart:26](lib/widgets/pulse_rings.dart:26) recording why `color`
+became required, and this file. No live colour anywhere.
+
+What that round mapped:
+
+| Element | Was | Now |
+|---|---|---|
+| Waveform, played portion | `accent` | `crimsonPrimaryContainer` |
+| Waveform, remaining | `textSecondary` @32% | `crimsonOutline` @32% |
+| Seek line | `accent` | `crimsonPrimary` |
+| Transcript-arrived icon | `neonTeal` | `crimsonPrimary` |
+| Tasks / Goals / Ideas headers | `neonTeal` / `accent` / `neonBlue` | `categoryTeal` / `categoryAmber` / `crimsonPrimaryContainer` |
+| Topics header | `textSecondary` | `categoryRose` |
+| "Open mind map" button | `accent` | `crimsonPrimary` |
+| Play button gradient + glow | `accentSoft → accent` | `crimsonPrimaryContainer → crimsonPrimary` |
+
+Three of those were judgement calls, not lookups:
+
+- **The seek line takes `crimsonPrimary`, not the container tone.** The played
+  bars already own `crimsonPrimaryContainer`; a 2px line in the same colour as
+  the bars it crosses is invisible, so the playhead takes the lighter sibling.
+- **Topics moved off neutral onto `categoryRose`.** It is a fourth category
+  exactly like the other three, and the mind map already paints it that way. A
+  grey header made it read as a subheading of Ideas rather than a peer. One
+  category, one colour, every screen — the same map as `MindMapNode.color`.
+- **The play button now matches `record_button.dart`'s gradient order**
+  (container → primary, top-left → bottom-right). It previously ran light → dark,
+  the opposite way. Two sibling buttons sharing a hue but reversing its direction
+  reads as a bug, not as a distinction.
+
+Playback keeps its three `GlassContainer`s (blur 20/18) untouched. That is the
+same carve-out the record dock gets: a static screen over a gradient that does
+not repaint per frame. **No blur was added** in this round, and none belongs on
+a canvas that repaints — see **Performance** and **Mind map**.
+
+### `textPrimary` / `textSecondary` survive, and that is not leftover Crimson work
+
+An earlier version of this section said these were "left for the playback round".
+They were not converted then either, deliberately: they are **app-wide chrome**,
+live on the record and mind-map screens as well, so swapping them on one screen
+would open a new inconsistency rather than close one. Crimson's `crimsonOnSurface`
+/ `crimsonOnSurfaceVariant` are still the intended replacements — that is a
+separate app-wide typography-colour pass, not a screen conversion.
 
 ---
 
@@ -451,8 +493,8 @@ What the Stitch pass actually changed:
   so the shape answers the finger before recording starts. The icon (mic ↔ stop)
   is still the primary state signal; shape only reinforces it.
 - **Gradient and glow are crimson** (`crimsonPrimaryContainer → crimsonPrimary`).
-  The original orange `accent` no longer appears on this screen; it survives only
-  on the two screens the rebrand hasn't reached yet.
+  The original orange `accent` is gone from the codebase entirely — the token
+  itself was deleted once playback converted.
 - **Pulse rings: two, not four, and indigo.** Two read as a pulse, four as a
   continuous wave. `PulseRings.color` is now **required** — it used to default to
   a hardcoded `Color(0xFFFF7A1A)`, which broke the MindropColors-only rule and

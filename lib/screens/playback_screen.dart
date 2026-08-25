@@ -54,11 +54,13 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
   static const _waveHeight = 130.0;
 
   final _waveStyle = PlayerWaveStyle(
-    // الجزء المُشغَّل بلون الهوية التفاعلي، والباقي رمادي باهت — نفس
+    // الجزء المُشغَّل بالقرمزي الحيّ، والباقي بمحايد Crimson باهت — نفس
     // منطق "أين وصلت" بمسجّلات النظام.
-    liveWaveColor: MindropColors.accent,
-    fixedWaveColor: MindropColors.textSecondary.withValues(alpha: 0.32),
-    seekLineColor: MindropColors.accent,
+    liveWaveColor: MindropColors.crimsonPrimaryContainer,
+    fixedWaveColor: MindropColors.crimsonOutline.withValues(alpha: 0.32),
+    // خط الموضع بالدرجة الفاتحة لا بنفس درجة الأعمدة المُشغَّلة: لو أخذ
+    // `crimsonPrimaryContainer` نفسه لذاب فيها واختفى مؤشر «وين أنا».
+    seekLineColor: MindropColors.crimsonPrimary,
     seekLineThickness: 2,
     // شرط الحزمة: waveThickness لازم يكون أصغر من spacing.
     waveThickness: 3,
@@ -336,7 +338,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
               hasText ? Icons.notes_rounded : Icons.hourglass_empty_rounded,
               size: 18,
               color: hasText
-                  ? MindropColors.neonTeal
+                  ? MindropColors.crimsonPrimary
                   : MindropColors.textSecondary,
             ),
             const SizedBox(width: 12),
@@ -399,12 +401,21 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _section(t.analysisTasks, analysis.tasks,
-                          Icons.check_circle_outline, MindropColors.neonTeal),
+                      // نفس خريطة الفئات الأربع تبع الخريطة الذهنية حرفيًا
+                      // (`MindMapNode.color`): الفئة الواحدة لازم يكون لها لون
+                      // واحد بكل الشاشات وإلا انهار الترميز اللوني من أصله.
+                      _section(
+                          t.analysisTasks,
+                          analysis.tasks,
+                          Icons.check_circle_outline,
+                          MindropColors.categoryTeal),
                       _section(t.analysisGoals, analysis.goals,
-                          Icons.flag_outlined, MindropColors.accent),
-                      _section(t.analysisIdeas, analysis.ideas,
-                          Icons.lightbulb_outline, MindropColors.neonBlue),
+                          Icons.flag_outlined, MindropColors.categoryAmber),
+                      _section(
+                          t.analysisIdeas,
+                          analysis.ideas,
+                          Icons.lightbulb_outline,
+                          MindropColors.crimsonPrimaryContainer),
                       _topics(t.analysisTopics, analysis.topics),
                       _buildMapButton(t, analysis),
                     ],
@@ -438,7 +449,9 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
         icon: const Icon(Icons.hub_outlined, size: 18),
         label: Text(t.mindMapOpen),
         style: TextButton.styleFrom(
-          foregroundColor: MindropColors.accent,
+          // الدرجة الفاتحة لا الحيّة: هذا **نص** بحجم 13.5 على أسود،
+          // و`crimsonPrimaryContainer` تباينه ضعيف بهذا المقاس.
+          foregroundColor: MindropColors.crimsonPrimary,
           textStyle:
               const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
         ),
@@ -519,8 +532,11 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
       children: [
         Row(
           children: [
+            // «المواضيع» فئة رابعة كاملة مثل الثلاث اللي فوق، فتاخذ لونها
+            // (`categoryRose`) لا الرمادي المحايد — كانت محايدة قبل التحوّل
+            // فتقرأ كعنوان ثانوي بينما هي بنفس المستوى تمامًا.
             Icon(Icons.tag_rounded,
-                size: 15, color: MindropColors.textSecondary),
+                size: 15, color: MindropColors.categoryRose),
             const SizedBox(width: 7),
             Text(
               label,
@@ -528,7 +544,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.4,
-                color: MindropColors.textSecondary,
+                color: MindropColors.categoryRose,
               ),
             ),
           ],
@@ -610,11 +626,18 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [MindropColors.accentSoft, MindropColors.accent],
+                // نفس ترتيب زر التسجيل بالضبط (`record_button.dart`):
+                // القرمزي الحيّ ثم الفاتح. الزران أخوان بالوظيفة —
+                // فرق التدرّج بينهما يُقرأ كخلل لا كتمييز.
+                colors: [
+                  MindropColors.crimsonPrimaryContainer,
+                  MindropColors.crimsonPrimary,
+                ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: MindropColors.accent.withValues(alpha: 0.42),
+                  color: MindropColors.crimsonPrimaryContainer
+                      .withValues(alpha: 0.42),
                   blurRadius: 28,
                   spreadRadius: 2,
                 ),
