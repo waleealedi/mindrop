@@ -38,8 +38,10 @@ None of these are oversights. Each needs an explicit decision, not a merge.
 2. **`firebase deploy --only firestore:rules`** — the `topics` rule is written in
    `firestore.rules` but not live, so clients would still be denied.
 3. **Backend deployment** — `_baseUrl` still defaults to `http://localhost:8787`,
-   i.e. the Mac behind `adb reverse`. `backend/render.yaml` exists and is ready;
-   nothing is hosted. Production builds pass `--dart-define=MINDROP_API_BASE=…`.
+   i.e. the Mac behind `adb reverse`. `render.yaml` sits at the **repo root**,
+   which is the only place Render's Blueprint scans; `rootDir: backend` inside it
+   points at the service. Ready, but nothing is hosted. Production builds pass
+   `--dart-define=MINDROP_API_BASE=…`.
 
 ### Not verified, and don't claim otherwise
 
