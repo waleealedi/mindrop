@@ -304,8 +304,13 @@ general text face; don't spread it.
   mirrors itself. `Icons.play_arrow_rounded` does **not**, so `_StateIcon` in
   [record_button.dart](lib/widgets/record_button.dart) flips it manually. `mic`
   and `stop` aren't directional.
-- **Progress fills from the right in Arabic** — no gap today: neither of these
-  screens has a playhead or progress bar, and the record waveform is symmetric.
+- **Progress fills from the right in Arabic.** This used to be a no-op here,
+  on the grounds that "the record waveform is symmetric". It no longer is: the
+  live waveform scrolls, so it carries a time direction, and time follows the
+  reading direction — newest bar on the right in English, on the left in Arabic.
+  `LiveWaveform` reads `Directionality.of(context)` and passes it to the painter
+  explicitly (there is no ambient one inside a `CustomPainter`). The playback
+  screen still has no playhead of its own to mirror.
 
 ### Ignore Crimson's blur
 
@@ -478,8 +483,9 @@ nothing about it. Only a human can confirm it — don't claim it works.
 
 The home screen, and the one place the app must stay one tap from recording.
 **Most of its motion predates the Stitch export** — the breathing button, the
-level-reactive halo, the pulse rings and the organic wave all shipped with the
-MVP. The Stitch pass was a recolour and a reshape on working code, not a rebuild.
+level-reactive halo and the pulse rings all shipped with the MVP. The Stitch pass
+was a recolour and a reshape on working code, not a rebuild. The waveform is the
+exception: it was replaced outright afterwards, and the reason is below.
 Read [record_screen.dart](lib/screens/record_screen.dart) and the three widgets
 it composes before assuming any of it is new.
 
@@ -516,9 +522,59 @@ Two consequences worth knowing before adding anything here:
 - The Stitch export puts the status caption on its own glass panel. **The dock
   already is that panel**, so the caption went inside it — a translucent panel
   nested in a translucent panel is worse than either. No blur was added.
-- [organic_waveform.dart](lib/widgets/organic_waveform.dart) uses
-  `MaskFilter.blur` for its glow. That is a *shape* blur, not a backdrop read,
-  and it predates all of this. Different thing, different cost — leave it.
+- The old `organic_waveform.dart` used `MaskFilter.blur` for its glow — a
+  *shape* blur, not a backdrop read, so it was allowed under a different rule
+  than the mind map's. That file is **deleted**; the live waveform draws flat
+  `RRect` bars with no filter of any kind. Nothing on this screen now needs the
+  shape-blur carve-out, so don't reintroduce one reasoning from that old note.
+
+### The waveform is real microphone data — do not make it decorative again
+
+[live_waveform.dart](lib/widgets/live_waveform.dart) draws one vertical bar per
+**actual amplitude reading**. This replaced `organic_waveform.dart`, which was
+three sine ribbons driven by a 7-second `AnimationController`; the real level only
+modulated their amplitude, thickness and glow. It moved during silence and its
+shape never corresponded to speech. The owner tested it while actually recording
+and rejected it for exactly that: they want the native Voice Memos / Samsung
+Recorder mechanic, bars that answer the microphone.
+
+**This is the same principle as the history row's deleted hash waveform** (see
+**History screen**) and as the transcript hallucination guard: a waveform shape
+claims "this is what the audio did", so it must not be generated. The two ideas
+have now been rejected once each — a third proposal to make this prettier by
+generating the shape is proposing the thing that was already removed twice.
+
+The chain, all of it pre-existing except the widget:
+
+- `record: ^7.1.1` exposes `onAmplitudeChanged(interval)` → `Stream<Amplitude>`,
+  `current`/`max` in dBFS. **No new dependency was needed**, and none was added.
+- `AudioRecorderService.amplitudeStream()` wraps it;
+  `levelStream()` normalises to 0..1. Both already existed and are unchanged.
+- `record_screen` owns the ring buffer, because it owns the subscription. The
+  widget is stateless and cannot invent a sample the microphone never sent.
+
+Normalisation lives in `levelStream()` and is **adaptive, not a fixed range** —
+`autoGain` is on during capture and its whole job is to flatten the gap between a
+whisper and a shout, so a fixed −160..0 map yields bars of near-identical height.
+Instead: floor −55 dBFS, a peak that jumps instantly upward and decays 0.4 dB per
+sample, a 14 dB minimum span so room tone can't fill the screen, `pow(raw, 1.7)`
+to widen contrast, then a 0.03 floor so silence still shows a line. Re-tune those
+five numbers there, not in the painter.
+
+Fixed choices in the widget, each with a reason:
+
+- **64 bars at 50 ms = a 3.2 s window.** Constant, not derived from width, so the
+  shape is identical on any screen; available width is divided by the count.
+- **Bars are never animated after they are drawn.** A bar is a record of an
+  elapsed 50 ms. Tweening it afterwards would be falsifying the reading. The only
+  motion is a new bar entering, one stride every 50 ms.
+- **Height is the signal; colour is redundant reinforcement** — the crimson ramp
+  `crimsonDeep → crimsonPrimaryContainer → crimsonPrimary` mapped by amplitude,
+  the same three export tones the old ribbons used. No new hex.
+- **Silence draws a row of dots, not an empty box.** Minimum half-height equals
+  half the bar width, so quiet reads as quiet rather than as a broken screen.
+- **Pause freezes and dims to 40%; it does not clear.** Those samples really
+  happened. `_resetWave()` runs on start and on stop only.
 
 Out of scope and deliberately not built: the export's bottom nav, settings entry
 and profile avatar. Mindrop has no screens behind any of them.

@@ -15,7 +15,7 @@ import '../theme/app_theme.dart';
 import '../widgets/ambient_background.dart';
 import '../widgets/glass_container.dart';
 import 'history_screen.dart';
-import '../widgets/organic_waveform.dart';
+import '../widgets/live_waveform.dart';
 import '../widgets/pulse_rings.dart';
 import '../widgets/record_button.dart';
 
@@ -42,8 +42,23 @@ class _RecordScreenState extends State<RecordScreen>
   String? _currentDraftId;
   int _pendingCount = 0;
 
-  /// آخر مستوى صوت (للهالة النابضة حول الزر وللموجة).
+  /// آخر مستوى صوت (للهالة النابضة حول الزر).
   double _level = 0;
+
+  /// عدد الأعمدة الظاهرة بالموجة الحيّة.
+  ///
+  /// ٦٤ عيّنة × ٥٠ms = نافذة ٣.٢ ثانية. ثابت لا محسوب من العرض عمدًا:
+  /// العرض المتاح يُقسَّم على هذا الرقم، فالشكل يطلع نفسه على أي مقاس
+  /// شاشة بدل ما يتغيّر عدد الأعمدة بين جهاز وجهاز.
+  static const _waveCapacity = 64;
+
+  /// تاريخ العيّنات المطبَّعة — **الشاشة تملكه لأنها هي المشتركة بالدفق**.
+  /// الويدجت رسّام بلا حالة، فما يقدر يخترع عيّنة ما وصلت من المايك.
+  final _levels = <double>[];
+
+  /// يزيد مع كل عيّنة. نعدّل [_levels] بمكانها بدل نسخة كل ٥٠ms، وهوية
+  /// القائمة ما تتغيّر — فبدون هذا العدّاد الرسّام ما يعرف إنه تغيّر شي.
+  int _levelRevision = 0;
 
   StreamSubscription<RecorderState>? _stateSub;
   StreamSubscription<double>? _levelSub;
@@ -130,6 +145,7 @@ class _RecordScreenState extends State<RecordScreen>
     }
 
     _currentDraftId = _uuid.v4();
+    _resetWave();
     final path = await DraftStore.instance.newRecordingPath(_currentDraftId!);
 
     try {
@@ -145,10 +161,26 @@ class _RecordScreenState extends State<RecordScreen>
 
   void _listenToLevels() {
     _levelSub?.cancel();
+    // الفاصل الافتراضي للدفق ٥٠ms — أسرع من هذا يعطي أعمدة أرفع من أن
+    // تُقرأ، وأبطأ يخلي الاستجابة تتأخر عن الصوت بشكل ملحوظ.
     _levelSub = _recorderService.levelStream().listen((v) {
       if (!mounted) return;
-      setState(() => _level = v);
+      setState(() {
+        _level = v;
+        _levels.add(v);
+        // مخزن دائري: نتخلص من الأقدم بدل ما نكبر بلا حد طول التسجيل.
+        if (_levels.length > _waveCapacity) _levels.removeAt(0);
+        _levelRevision++;
+      });
     });
+  }
+
+  /// يمسح تاريخ الموجة. يُنادى عند بدء تسجيل جديد وعند إنهائه فقط —
+  /// **لا عند الإيقاف المؤقت**: العيّنات اللي انسجلت فعلًا تبقى صحيحة،
+  /// فنجمّدها ونخفتها بدل ما نمحيها.
+  void _resetWave() {
+    _levels.clear();
+    _levelRevision++;
   }
 
   Future<void> _pauseRecording() async {
@@ -186,6 +218,7 @@ class _RecordScreenState extends State<RecordScreen>
       _elapsed = Duration.zero;
       _currentDraftId = null;
       _level = 0;
+      _resetWave();
     });
     await _refreshPendingCount();
 
@@ -519,7 +552,12 @@ class _RecordScreenState extends State<RecordScreen>
             opacity: isLive ? 1 : 0,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 26),
-              child: OrganicWaveform(level: _level, active: isRecording),
+              child: LiveWaveform(
+                samples: _levels,
+                capacity: _waveCapacity,
+                revision: _levelRevision,
+                active: isRecording,
+              ),
             ),
           ),
         ),
