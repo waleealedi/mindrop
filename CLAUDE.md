@@ -11,6 +11,48 @@ code-switching is the normal case**, not an edge case.
 
 ---
 
+## Where things stand
+
+The MVP pipeline works end to end. Since then the work has been a visual identity
+migration plus one backend feature. **Read this before assuming a screen or a
+feature is in its final state.**
+
+| Area | State |
+|---|---|
+| Record, mind map, history screens | On **Obsidian Crimson** |
+| Playback screen | **Not converted** — still pre-Crimson orange/teal |
+| Backend (transcribe → analyse) | Working, runs **locally only** |
+| Persistent topics | Code committed, **switched off** (no key) |
+
+Identity went neutral-black+orange → Bio-Digital navy → Crimson. Two of the four
+category colours are still Bio-Digital survivors, on purpose — see **Design
+system**. `MindropColors.accent`/`accentSoft`/`neonTeal`/`neonBlue` exist *only*
+because `playback_screen` still consumes them; when that screen converts, they go.
+
+### Three switches that are deliberately off
+
+None of these are oversights. Each needs an explicit decision, not a merge.
+
+1. **`OPENAI_API_KEY`** — persistent topics no-op without it. Setting it activates
+   a new paid dependency; that is the owner's call. See **Persistent topics**.
+2. **`firebase deploy --only firestore:rules`** — the `topics` rule is written in
+   `firestore.rules` but not live, so clients would still be denied.
+3. **Backend deployment** — `_baseUrl` still defaults to `http://localhost:8787`,
+   i.e. the Mac behind `adb reverse`. `backend/render.yaml` exists and is ready;
+   nothing is hosted. Production builds pass `--dart-define=MINDROP_API_BASE=…`.
+
+### Not verified, and don't claim otherwise
+
+- **Pinch-to-zoom on the mind map** has never been confirmed with a real gesture.
+  `adb` cannot usefully simulate two fingers and single-touch `input` proves
+  nothing. Only a human can check it.
+- **The mind map frame timings** below predate the Crimson paint path — see the
+  warning on that table.
+- **Persistent topics has no integration test.** No emulator is configured, so the
+  Firestore write shapes are reviewed code, not exercised code.
+
+---
+
 ## Git
 
 - **Commit and push after every completed task**, not at the end of a session.
@@ -75,6 +117,35 @@ emulator — the dev machine is an 8GB MacBook Air M2.
 `::1` / `10.0.2.2` **only**. Android blocks cleartext since API 28, and the
 automatic localhost exception ships from API 37 — this device is 36. Never
 replace it with `usesCleartextTraffic="true"`; that opens HTTP to every host.
+
+### Deploying to the device — `adb install -r`, never `flutter install`
+
+**`flutter install` destroyed local app data once.** It uninstalls the existing
+app *before* checking the target APK exists, so a mode mismatch (it defaults to
+release; the build was `--debug`) leaves the app gone and nothing installed. The
+uninstall takes app data with it.
+
+`adb install -r` replaces in place and fails safe when the path is wrong.
+
+```bash
+adb devices                                  # read the id fresh, never assume
+flutter build apk --debug
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
+Back up first — the real data directory is **`app_flutter/`**, not `files/`
+(`files/` holds only cached Google Fonts):
+
+```bash
+adb exec-out run-as com.mindrop.mindrop tar -czf - app_flutter shared_prefs > ~/Desktop/mindrop_backup.tar.gz
+```
+
+`exec-out` rather than staging through `/sdcard` — the app uid cannot reliably
+write there. Include `shared_prefs`: it holds the **Firebase anonymous uid**. Lose
+that and the reinstalled app mints a new one, orphaning every Firestore document
+under the old uid — the transcripts survive in the cloud but the app can't see them.
+
+Judge success from the command's own output and exit code.
 
 ---
 
@@ -585,6 +656,25 @@ that needs `firebase deploy --only firestore:rules`, which has not been run.
 
 ---
 
+## Verifying before you call something done
+
+Host-only, no device needed, seconds not minutes — run both before claiming
+anything works:
+
+```bash
+flutter analyze          # baseline: 1 info (unnecessary import, main.dart:1)
+flutter test             # baseline: 4/4
+cd backend && npm test   # baseline: 13/13 — node:test, no extra deps
+```
+
+`flutter analyze` does **not** regenerate localizations; run `flutter gen-l10n`
+after editing an ARB or it reports a correct key as `undefined_getter`.
+
+The backend suite covers the topic matcher's pure logic only — deliberately no
+network and no Firestore, so it needs neither a key nor an emulator.
+
+---
+
 ## Code style
 
 - **Arabic comments are intentional and document *why*, usually after a real bug.**
@@ -599,8 +689,6 @@ that needs `firebase deploy --only firestore:rules`, which has not been run.
 
 ## Known inconsistencies (flagged, not fixed)
 
-- `backend/.env.example` omits `GROQ_API_KEY`, though both services point users to
-  that file when the key is missing.
 - The `FirestoreSyncService` class doc and the `backend/src/server.js` header both
   describe a pre-backend world that no longer exists. Trust the code.
 - `flutter analyze`'s only finding: unnecessary `flutter/foundation.dart` import at
