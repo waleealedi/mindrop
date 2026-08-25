@@ -247,9 +247,12 @@ no-blur rule predates every export and is backed by measurement.
 `crimsonDeep` `#BE0037` (the export's `inverse-primary`) is the third crimson.
 The organic waveform needs three separable ribbons and Crimson ships one accent,
 so the ramp is **deep → container → primary**, all from the export, none invented.
-The history list's mini waveform walks the same ramp so both places read as one
-family. Stitch's own waveform treatment was not traced — its mockup is a flat
-two-tone progress bar, a different object entirely.
+Stitch's own waveform treatment was not traced — its mockup is a flat two-tone
+progress bar, a different object entirely.
+
+The history list briefly walked this same ramp for a per-row mini waveform; that
+was removed (see **History screen**), and its row glyph now uses the container
+tone alone.
 
 ### Not yet converted
 
@@ -422,27 +425,32 @@ The Crimson pass added:
   **calendar day, not elapsed hours** (11pm and 1am are two hours apart and two
   different days). Headers and rows are flattened into one `_Row` list so
   `ListView.builder` stays lazy.
-- **A mini waveform per row** — see the honesty note below.
+- **A static audio glyph per row** (`Icons.waves_rounded`) — see below for what
+  it replaced and why.
 - Crimson surfaces, `crimsonOutline` mono timestamps, status colours collapsed
   onto the one-accent system (neutral = waiting, light = moving, vivid = working
   now, white = done, red = failed). The icon and label still carry the meaning;
   colour never carries it alone.
 
-### The mini waveform is decoration, and the code says so
+### Don't put a waveform on a list row unless it's real
 
-It is **not** a rendering of the audio. Heights are hashed deterministically from
-the recording id, so a given recording always looks the same — but nothing about
-the shape reflects what was said.
+Round B shipped a per-row mini waveform whose bar heights were hashed from the
+recording id — stable per recording, but never matching the audio. It was
+**removed** in the next commit and replaced with one static `Icons.waves_rounded`,
+identical on every row.
 
-Two reasons. Drawing the real thing means decoding every audio file inside a
-scrolling list, which the performance rule exists to prevent. And a waveform that
-claims to depict audio while depicting a hash is a small visual lie, in an app
-whose analysis schema has no optional fields precisely so the model cannot invent
-content. Stitch treats it the same way — its own mockup hardcodes the bar heights
-per row.
+The reasoning is worth keeping, because the idea will come back. A waveform shape
+carries a specific claim: peaks and valleys read as *this is what the audio
+actually did*. A hash-derived pattern quietly breaks that, however stable it is.
+Stitch's mockup hardcodes bar heights too, but Stitch is a static reference image
+and Mindrop is a shipping product whose whole premise is not inventing content on
+top of what the user said — the same reason the transcript side has a
+hallucination guard. A waveform-shaped graphic not derived from the audio is that
+problem in miniature.
 
-If you ever wire it to real amplitude data, delete the comment in
-[mini_waveform.dart](lib/widgets/mini_waveform.dart) along with the hash.
+Drawing the real thing is also blocked from the other side: it means decoding
+every audio file inside a scrolling list, which the performance rule exists to
+prevent. So the row gets a symbol, which claims nothing.
 
 ### Not built, deliberately
 

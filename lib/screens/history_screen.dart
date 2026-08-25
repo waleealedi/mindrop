@@ -11,7 +11,6 @@ import '../services/draft_store.dart';
 import '../services/firestore_sync_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ambient_background.dart';
-import '../widgets/mini_waveform.dart';
 import '../widgets/transcript_text.dart';
 import 'playback_screen.dart';
 
@@ -482,13 +481,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                // توقيع بصري يقول «هذا مقطع صوتي» — زخرفة
-                                // حتمية لا قراءة للموجة، راجع [MiniWaveform].
-                                MiniWaveform(
-                                  seed: draft.id,
-                                  muted: !(remote?.hasTranscript ?? false),
+                                // أيقونة ثابتة تقول «هذا مقطع صوتي» — نفسها
+                                // بكل صف، ما تُشتق من أي شي بالتسجيل.
+                                //
+                                // **كانت أعمدة موجة مشتقّة من تجزئة المعرّف،
+                                // وأُزيلت عمدًا.** شكل الموجة يحمل معنى محددًا
+                                // لمن يشوفه: القمم والقيعان تُقرأ كـ«هذا ما فعله
+                                // الصوت فعلًا». نمط مشتق من تجزئة لا يطابق
+                                // التسجيل أبدًا يكسر هذا التوقّع بهدوء، حتى لو
+                                // كان ثابتًا لكل تسجيل. وهذا تطبيق كل مبدأه ألا
+                                // يضيف شيئًا فوق ما قاله المستخدم — نفس سبب
+                                // وجود حارس الهلوسة بجهة التفريغ. أيقونة رمزية
+                                // ما تدّعي شيئًا، فما فيها المشكلة.
+                                Icon(
+                                  Icons.waves_rounded,
+                                  size: 17,
+                                  color: MindropColors.crimsonPrimaryContainer
+                                      .withValues(alpha: 0.85),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 9),
                                 Text(
                                   _formatDuration(
                                       Duration(milliseconds: draft.durationMs)),
