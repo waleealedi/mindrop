@@ -7,6 +7,7 @@ import path from 'node:path';
 import { verifyToken } from '../middleware/verifyToken.js';
 import { transcribe } from '../services/transcription.js';
 import { analyze } from '../services/analysis.js';
+import { linkTopicsInBackground } from '../services/topics.js';
 import {
   hasStoredTranscript,
   markAnalyzing,
@@ -174,6 +175,13 @@ async function analyzeInBackground(transcript, recordingId, uid) {
 
     await bestEffort(() => saveAnalysis(uid, recordingId, analysis));
     console.log(`[${recordingId}] تم التحليل:`, JSON.stringify(analysis));
+
+    // ربط المواضيع الدائمة — **بعد** ما اكتمل التحليل وصار `completed`.
+    //
+    // موضعه هنا مقصود: الحالة النهائية مكتوبة قبله، فحتى لو تعطّل هذا كليًا
+    // يبقى التسجيل مكتملًا وظاهرًا للمستخدم كما هو. والدالة نفسها ما ترمي
+    // أبدًا، فما تحتاج `bestEffort` — تبتلع فشلها بداخلها.
+    await linkTopicsInBackground(uid, recordingId, analysis);
   } catch (err) {
     console.error(`[${recordingId}] فشل التحليل:`, err.message);
     await bestEffort(() =>

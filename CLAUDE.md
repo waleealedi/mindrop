@@ -530,6 +530,58 @@ metadata and the backend writes results into the **same** Firestore doc
 - Analysis schema is four required string arrays with **no optional fields** — every
   optional field invites the model to invent a value nobody said, and a hallucinated
   task is the worst failure this product can produce.
+- **Persistent topics run after `saveAnalysis`, never before.** There are no Cloud
+  Functions in this repo and no `functions/` directory — the whole pipeline is the
+  stateless Express server, and every stage already runs after the 200 has gone back
+  to the phone. So this step adds no latency to the save by construction. See
+  **Persistent topics** below.
+
+---
+
+## Persistent topics (backend only)
+
+Cross-recording topics: `users/{uid}/topics/{topicId}`, built after a recording's
+analysis lands. **Only the topics category participates** — tasks, goals and ideas
+stay strictly per-recording, which is the same boundary that keeps
+`global_universe_map` out of scope.
+
+- [topicMatcher.js](backend/src/services/topicMatcher.js) is **pure** — cosine
+  similarity, the threshold, the create-vs-suggest decision, id generation. No
+  network, no Firestore, so it is fully unit-testable without a key or an emulator.
+  `SIMILARITY_THRESHOLD` sits at the top of that file; it is **0.83 as a
+  placeholder**, not a researched value, and needs tuning against real usage.
+- **Nothing auto-links.** Below threshold creates a new topic silently; at or above
+  it writes a `topicSuggestion` with `status: 'pending'` and waits. Auto-linking
+  would silently merge two different ideas, which is worse than one question.
+- **`analysis.topics` stays `string[]`.** The per-item metadata lives in a parallel
+  `topicLinks` array on the recording doc. This is not stylistic: the Flutter client
+  parses with `whereType<String>()`, so turning items into objects would make every
+  topic **silently vanish** from playback and the mind map with no error anywhere.
+- Category items have **no stable id of their own**, so `topicLinks[].itemId` is
+  derived as `sha1(recordingId|normalizedText|occurrence)`. Array indices were
+  rejected — a reorder or partial rewrite would silently repoint them.
+- `mergedEmbedding` exists and is tested but **is not called yet**. It is the
+  centroid update for the accept path, which is a later round.
+
+### It is off until a key exists
+
+Embeddings need a provider the audio path does not have: Groq has no embeddings
+endpoint, and `OPENROUTER_API_KEY` is inert (billing wall, see `transcription.js`).
+The code targets OpenAI `text-embedding-3-small` via plain `fetch` — no new npm
+dependency — and **no-ops entirely without `OPENAI_API_KEY`**, logging once. Adding
+the key is what switches on a new paid dependency, and that is deliberately the
+owner's call, not a side effect of this commit.
+
+Every failure in this step is swallowed. The analysis is already written and the
+recording already reads `completed` before it runs; the worst outcome is a topic
+that does not get created.
+
+### The rule is written but not deployed
+
+`firestore.rules` now has an owner-only `users/{uid}/topics/{topicId}` match. The
+backend never needed it (Admin SDK bypasses rules) — it is for the future client,
+which would otherwise be denied by default. **Editing the file does not deploy it**;
+that needs `firebase deploy --only firestore:rules`, which has not been run.
 
 ---
 

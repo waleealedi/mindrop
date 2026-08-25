@@ -7,5 +7,17 @@ service cloud.firestore {
     match /users/{uid}/recordings/{recordingId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // المواضيع الدائمة العابرة للتسجيلات. نفس حدود الملكية بالضبط.
+    //
+    // الباك-إند ما يحتاج هذي القاعدة (Admin SDK يتجاوز القواعد) — هي
+    // للعميل: بدونها ما يقدر يقرأ مواضيعه إطلاقًا، لأن أي مسار غير مذكور
+    // ممنوع افتراضيًا. أُضيفت الآن عشان جولة الواجهة تلقاها جاهزة.
+    //
+    // ⚠️ إضافتها هنا **ما تنشرها**. تحتاج `firebase deploy --only
+    // firestore:rules` وهو أمر لم يُنفَّذ عمدًا بهذي الجولة.
+    match /users/{uid}/topics/{topicId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }
