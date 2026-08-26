@@ -26,8 +26,10 @@ feature is in its final state.**
 Identity went neutral-black+orange → Bio-Digital navy → Crimson. Two of the four
 category colours are still Bio-Digital survivors, on purpose — see **Design
 system**. `MindropColors.accent`/`accentSoft`/`neonTeal`/`neonBlue` were the last
-pre-Crimson tokens, kept alive only by `playback_screen`; that screen converted,
-so **they are deleted from the theme** and the identity migration is closed.
+pre-Crimson *accent* tokens, kept alive only by `playback_screen`; that screen
+converted, so they are deleted. `textPrimary` / `textSecondary` — the app-wide
+chrome neutrals — were the final piece and are **also deleted now**. No token in
+`MindropColors` predates Crimson, and the identity migration is fully closed.
 
 ### Three switches that are deliberately off
 
@@ -373,14 +375,46 @@ same carve-out the record dock gets: a static screen over a gradient that does
 not repaint per frame. **No blur was added** in this round, and none belongs on
 a canvas that repaints — see **Performance** and **Mind map**.
 
-### `textPrimary` / `textSecondary` survive, and that is not leftover Crimson work
+### The neutrals are three tiers, not two — and that is the whole trick
 
-An earlier version of this section said these were "left for the playback round".
-They were not converted then either, deliberately: they are **app-wide chrome**,
-live on the record and mind-map screens as well, so swapping them on one screen
-would open a new inconsistency rather than close one. Crimson's `crimsonOnSurface`
-/ `crimsonOnSurfaceVariant` are still the intended replacements — that is a
-separate app-wide typography-colour pass, not a screen conversion.
+`textPrimary` (`#FFFFFF`) and `textSecondary` (`#9A9AA0`) are now **deleted**.
+They were held back through every screen round on purpose — app-wide chrome
+cannot be converted one screen at a time without opening a new inconsistency —
+and were done in a single pass across all 21 read sites once nothing else was
+left. `MindropColors` no longer defines a colour that predates Crimson.
+
+The export supplies the replacements; none was invented:
+
+| Tier | Token | Value | Used for |
+|---|---|---|---|
+| primary | `crimsonOnSurface` | `#E3E2E2` | body copy, titles, user content, back arrows |
+| secondary prose | `crimsonOnSurfaceVariant` | `#E5BDBE` | empty states, pending copy, error text |
+| meta / muted | `crimsonOutline` | `#AC8889` | timestamps, counts, chips, quiet chrome icons |
+
+**`textSecondary` had to split in two, and skipping that would have been the
+real bug.** It was doing two jobs — secondary prose *and* small data readouts —
+so mapping it 1:1 onto `crimsonOnSurfaceVariant` collapses the hierarchy:
+primary-to-secondary luminance separation drops from **3.08×** to **1.34×**, i.e.
+captions come out nearly as bright as the text they sit under. Routing the meta
+half to `crimsonOutline` keeps it at **2.70×**, close to the original 3.08×.
+
+The three-tier split is not a new invention either — `history_screen` already
+shipped exactly this (`crimsonOutline` on its `label-sm` mono timestamps,
+`crimsonOnSurfaceVariant` on its 15pt prose). This pass copied that screen.
+
+Contrast went **up**, not down, everywhere it moved — measured against
+`background` `#0A0A0A`:
+
+| | before | after |
+|---|---|---|
+| primary | 19.80:1 | 15.31:1 |
+| secondary prose | 7.07:1 | 10.88:1 |
+| meta | 7.07:1 | 6.26:1 |
+
+All well past WCAG AA; primary and secondary clear AAA. The meta tier is the
+only one that drops, by 0.8, and it lands at 6.26:1 — still above AA for body
+text and far above the 3:1 icons need. That was the price of keeping hierarchy,
+and it is the right trade.
 
 ---
 

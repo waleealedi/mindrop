@@ -311,7 +311,7 @@ class _RecordScreenState extends State<RecordScreen>
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: MindropColors.textPrimary,
+                      color: MindropColors.crimsonOnSurface,
                     ),
                   ),
                 ),
@@ -426,7 +426,7 @@ class _RecordScreenState extends State<RecordScreen>
               fontSize: 17,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
-              color: MindropColors.textPrimary,
+              color: MindropColors.crimsonOnSurface,
             ),
           ),
           const Spacer(),
@@ -434,7 +434,7 @@ class _RecordScreenState extends State<RecordScreen>
             onPressed: _openHistory,
             icon: const Icon(Icons.history_rounded),
             iconSize: 22,
-            color: MindropColors.textSecondary,
+            color: MindropColors.crimsonOutline,
             // يغذّي التلميح وقارئ الشاشة معًا — IconButton يمرر النص
             // كـ Semantics label تلقائيًا.
             tooltip: t.historyOpenTooltip,
@@ -507,7 +507,7 @@ class _RecordScreenState extends State<RecordScreen>
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: MindropColors.textSecondary,
+              color: MindropColors.crimsonOutline,
             ),
           ),
         ],

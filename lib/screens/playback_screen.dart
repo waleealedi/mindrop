@@ -235,7 +235,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
           IconButton(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_rounded),
-            color: MindropColors.textPrimary,
+            color: MindropColors.crimsonOnSurface,
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           ),
           const SizedBox(width: 4),
@@ -248,7 +248,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: MindropColors.textPrimary,
+                color: MindropColors.crimsonOnSurface,
               ),
             ),
           ),
@@ -293,7 +293,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
           style: const TextStyle(
             fontSize: 14.5,
             fontWeight: FontWeight.w500,
-            color: MindropColors.textSecondary,
+            color: MindropColors.crimsonOnSurfaceVariant,
           ),
         ),
       );
@@ -339,7 +339,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
               size: 18,
               color: hasText
                   ? MindropColors.crimsonPrimary
-                  : MindropColors.textSecondary,
+                  : MindropColors.crimsonOutline,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -352,7 +352,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
                         fontSize: 15,
                         height: 1.55,
                         fontWeight: FontWeight.w500,
-                        color: MindropColors.textPrimary,
+                        color: MindropColors.crimsonOnSurface,
                       ),
                     )
                   : Text(
@@ -361,7 +361,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
                         fontSize: 13.5,
                         height: 1.55,
                         fontWeight: FontWeight.w500,
-                        color: MindropColors.textSecondary,
+                        color: MindropColors.crimsonOnSurfaceVariant,
                       ),
                     ),
             ),
@@ -463,7 +463,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: MindropColors.textSecondary),
+        Icon(icon, size: 18, color: MindropColors.crimsonOutline),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
@@ -472,7 +472,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
               fontSize: 13.5,
               height: 1.5,
               fontWeight: FontWeight.w500,
-              color: MindropColors.textSecondary,
+              color: MindropColors.crimsonOnSurfaceVariant,
             ),
           ),
         ),
@@ -514,7 +514,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
                   fontSize: 14.5,
                   height: 1.45,
                   fontWeight: FontWeight.w500,
-                  color: MindropColors.textPrimary,
+                  color: MindropColors.crimsonOnSurface,
                 ),
               ),
             ),
@@ -568,7 +568,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: MindropColors.textSecondary,
+                    color: MindropColors.crimsonOutline,
                   ),
                 ),
               ),
@@ -582,7 +582,7 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
     const style = TextStyle(
       fontSize: 13,
       fontWeight: FontWeight.w500,
-      color: MindropColors.textSecondary,
+      color: MindropColors.crimsonOutline,
       fontFeatures: [FontFeature.tabularFigures()],
     );
 

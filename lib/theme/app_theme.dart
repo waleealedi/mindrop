@@ -77,10 +77,6 @@ class MindropColors {
 
   /// أحمر رسائل الخطأ. كان مكتوبًا حرفيًا داخل شاشة التسجيل.
   static const errorRed = Color(0xFFFF6B6B);
-
-  // ---------------------------------------------------------------- النص
-  static const textPrimary = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFF9A9AA0);
 }
 
 /// خطوط الهوية — Geist للاتيني، IBM Plex Sans Arabic للعربي،

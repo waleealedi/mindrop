@@ -91,7 +91,8 @@ class _MindMapScreenState extends State<MindMapScreen>
 
   void _onTransform() {
     final m = _controller.value;
-    final moved = (m.getTranslation() - _homeMatrix.getTranslation()).length > 8 ||
+    final moved = (m.getTranslation() - _homeMatrix.getTranslation()).length >
+            8 ||
         (m.getMaxScaleOnAxis() - _homeMatrix.getMaxScaleOnAxis()).abs() > 0.02;
     if (_transformed.value != moved) _transformed.value = moved;
   }
@@ -169,7 +170,8 @@ class _MindMapScreenState extends State<MindMapScreen>
   void _handleTapUp(TapUpDetails d) {
     final hit = _layout?.hitTest(d.localPosition);
     // الضغط على الفراغ يلغي التحديد — خروج طبيعي بلا زر إضافي.
-    final next = (hit == null || hit.node.id == _selectedId) ? null : hit.node.id;
+    final next =
+        (hit == null || hit.node.id == _selectedId) ? null : hit.node.id;
 
     setState(() {
       if (next != null) _lastSelectedId = next;
@@ -234,7 +236,7 @@ class _MindMapScreenState extends State<MindMapScreen>
           IconButton(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_rounded),
-            color: MindropColors.textPrimary,
+            color: MindropColors.crimsonOnSurface,
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           ),
           const SizedBox(width: 4),
@@ -245,7 +247,7 @@ class _MindMapScreenState extends State<MindMapScreen>
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: MindropColors.textPrimary,
+                color: MindropColors.crimsonOnSurface,
               ),
             ),
           ),
@@ -262,7 +264,7 @@ class _MindMapScreenState extends State<MindMapScreen>
                   onPressed: _resetView,
                   icon: const Icon(Icons.center_focus_strong_rounded),
                   iconSize: 21,
-                  color: MindropColors.textSecondary,
+                  color: MindropColors.crimsonOutline,
                   tooltip: t.mindMapResetView,
                   visualDensity: VisualDensity.compact,
                 ),
@@ -404,7 +406,7 @@ class _MindMapScreenState extends State<MindMapScreen>
               fontSize: 14.5,
               height: 1.45,
               fontWeight: FontWeight.w500,
-              color: MindropColors.textPrimary,
+              color: MindropColors.crimsonOnSurface,
             ),
           ),
         ],
@@ -422,7 +424,7 @@ class _MindMapScreenState extends State<MindMapScreen>
             Icon(
               Icons.hub_outlined,
               size: 34,
-              color: MindropColors.textSecondary.withValues(alpha: 0.7),
+              color: MindropColors.crimsonOutline.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 14),
             Text(
@@ -432,7 +434,7 @@ class _MindMapScreenState extends State<MindMapScreen>
                 fontSize: 14.5,
                 height: 1.5,
                 fontWeight: FontWeight.w500,
-                color: MindropColors.textSecondary,
+                color: MindropColors.crimsonOnSurfaceVariant,
               ),
             ),
           ],
