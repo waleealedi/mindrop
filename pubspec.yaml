@@ -52,6 +52,11 @@ dependencies:
   http: ^1.6.0
 
 dev_dependencies:
+  # يولّد أيقونات المشغّل الأصلية من assets/icon/ — أداة بناء وقت التطوير
+  # فقط، ما تدخل الـAPK. الإعداد بملف flutter_launcher_icons.yaml مستقل،
+  # نفس عادة المستودع (l10n.yaml، analysis_options.yaml، render.yaml).
+  flutter_launcher_icons: ^0.14.4
+
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0

@@ -316,6 +316,39 @@ general text face; don't spread it.
   explicitly (there is no ambient one inside a `CustomPainter`). The playback
   screen still has no playhead of its own to mirror.
 
+### App icon and display name are final
+
+The launcher icon is the approved **"Droplet Containing Brain"** mark — a crimson
+droplet enclosing a simplified brain — and the display name is **`Mindrop`** on
+both platforms (`android:label`, and iOS `CFBundleDisplayName` + `CFBundleName`).
+Android's label was `mindrop`, lowercase, until this landed.
+
+- Masters live in `assets/icon/`: `mindrop-icon-full.png` (1024², opaque, on
+  `#0D0D0D`) and `mindrop-icon-foreground.png` (1024², transparent, pre-inset for
+  the adaptive safe zone). **They are deliberately not listed under `flutter:`
+  `assets:`** — they are build-time inputs that become native resources, so
+  bundling them too would ship the same image twice.
+- Regenerate with `dart run flutter_launcher_icons` after changing either master.
+  Config is `flutter_launcher_icons.yaml` at the repo root, matching how every
+  other tool here is configured (`l10n.yaml`, `analysis_options.yaml`,
+  `render.yaml`) rather than another block inside `pubspec.yaml`.
+- **The drop in the artwork is `#9B111E`, and that is not a `MindropColors`
+  token.** The app's live crimson is `crimsonPrimaryContainer` `#E11D48`. The mark
+  is fixed artwork with its own palette; don't "reconcile" the two by repainting
+  the icon or by adding `#9B111E` to the theme.
+- The icon background is `#0D0D0D`, the pre-Crimson flat surface value, **not**
+  `background` `#0A0A0A`. It came with the approved artwork, it is two units per
+  channel away, and matching it would mean re-exporting the master for no
+  visible gain.
+
+**One package quirk, already handled:** `flutter_launcher_icons` 0.14.4 rewrites
+`ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` in
+`ios/Runner.xcodeproj/project.pbxproj` from `YES` to `AppIcon`. That setting is a
+boolean and `AppIcon` reads as false, so it silently disables Swift asset symbol
+generation; the tool is confusing it with `ASSETCATALOG_COMPILER_APPICON_NAME`,
+which is **already** `AppIcon` in all three build configs. The edit was reverted
+and nothing was lost. Revert it again after any future icon regeneration.
+
 ### Ignore Crimson's blur
 
 Its `DESIGN.md` names 20–24px backdrop blur as a core pillar. Skip it — same

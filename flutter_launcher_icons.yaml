@@ -1,0 +1,21 @@
+# أيقونة التطبيق الرسمية — «قطرة تحتوي دماغًا»، القطرة بلون #9B111E.
+#
+# الملفات مصدرها assets/icon/ وما تُدرج ضمن `flutter:` `assets:` بقصد:
+# هذي أصول وقت بناء تتحوّل لموارد أصلية (mipmap/Assets.xcassets)، فإدراجها
+# كأصول تطبيق يعني شحن نفس الصورة مرتين داخل الحزمة بلا فائدة.
+flutter_launcher_icons:
+  # الأيقونة الكاملة على خلفية داكنة — تغطي iOS وأندرويد ما قبل التكيّفية.
+  # بلا قناة ألفا عمدًا: App Store يرفض أيقونة iOS فيها شفافية.
+  image_path: "assets/icon/mindrop-icon-full.png"
+
+  android: true
+  ios: true
+
+  # الأيقونة التكيّفية (API 26+): الخلفية لون مصمت والمقدمة شفافة، فيقدر
+  # المشغّل يقصّها لأي شكل بلا ما يقصّ الشعار نفسه.
+  adaptive_icon_background: "#0D0D0D"
+  adaptive_icon_foreground: "assets/icon/mindrop-icon-foreground.png"
+
+  # نبقيها 21 عشان تتولّد النسخة القديمة (mipmap-*/) والتكيّفية
+  # (mipmap-anydpi-v26/) معًا — minSdk بالمشروع يجي من Flutter نفسه.
+  min_sdk_android: 21
