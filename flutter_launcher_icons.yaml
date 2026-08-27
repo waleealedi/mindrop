@@ -1,4 +1,5 @@
-# أيقونة التطبيق الرسمية — «قطرة تحتوي دماغًا»، القطرة بلون #9B111E.
+# أيقونة التطبيق الرسمية — «قطرة تحتوي دماغًا». القطرة #E11D48 والخلفية
+# #0A0A0A: نفس `crimsonPrimaryContainer` و`background` بالضبط، لا درجات قريبة.
 #
 # الملفات مصدرها assets/icon/ وما تُدرج ضمن `flutter:` `assets:` بقصد:
 # هذي أصول وقت بناء تتحوّل لموارد أصلية (mipmap/Assets.xcassets)، فإدراجها
@@ -13,7 +14,7 @@ flutter_launcher_icons:
 
   # الأيقونة التكيّفية (API 26+): الخلفية لون مصمت والمقدمة شفافة، فيقدر
   # المشغّل يقصّها لأي شكل بلا ما يقصّ الشعار نفسه.
-  adaptive_icon_background: "#0D0D0D"
+  adaptive_icon_background: "#0A0A0A"
   adaptive_icon_foreground: "assets/icon/mindrop-icon-foreground.png"
 
   # نبقيها 21 عشان تتولّد النسخة القديمة (mipmap-*/) والتكيّفية
