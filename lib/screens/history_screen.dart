@@ -386,6 +386,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       mergedRecordingStatus(draft.status, remote?.status),
       t,
     );
+    final title = resolveRecordingTitle(draft, remote?.title);
     final createdAt = draft.createdAt;
     final date = DateFormat.yMMMd(localeName).format(createdAt);
     final time = DateFormat.jm(localeName).format(createdAt);
@@ -447,11 +448,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // النص المفرَّغ يتصدّر البطاقة لما يوصل: هو
-                            // "الفكرة" نفسها، والحالة تصير تفصيلًا ثانويًا.
-                            // قبل وصوله تبقى الحالة هي العنوان عشان ما تطلع
-                            // بطاقة بلا هوية.
-                            if (remote?.hasTranscript ?? false)
+                            // سلسلة الهوية، من الأدق للأعم:
+                            //   عنوان (يدوي أو من الذكاء)
+                            //   ← النص المفرَّغ مقصوصًا
+                            //   ← اسم الحالة.
+                            // العنوان أدق لأنه ملخّص للتسجيل كله، بينما
+                            // النص المقصوص أول سطرين وبس — وقد يكونان
+                            // تمهيدًا لا يقول شيئًا. التسجيلات المسجّلة قبل
+                            // هذي الميزة ما عندها عنوان فتنزل للبديل نفسه
+                            // اللي كانت عليه بالضبط.
+                            if (title != null)
+                              // العنوان محتوى مستخدم مثل النص تمامًا —
+                              // اتجاهه من حروفه هو لا من لغة الواجهة.
+                              TranscriptText(
+                                title,
+                                maxLines: 2,
+                                style: MindropFonts.style(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.35,
+                                  color: MindropColors.crimsonOnSurface,
+                                ),
+                              )
+                            else if (remote?.hasTranscript ?? false)
                               // اتجاه النص من محتواه هو مو من لغة الواجهة
                               // (راجع [TranscriptText]). بقية البطاقة —
                               // التاريخ والمدة والحالة — تبقى على لغة

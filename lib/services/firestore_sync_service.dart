@@ -89,12 +89,20 @@ class RemoteRecording {
     this.status,
     this.errorMessage,
     this.analysis,
+    this.titleEditedByUser = false,
   });
 
   final String? transcript;
   final RecordingStatus? status;
   final String? errorMessage;
   final RecordingAnalysis? analysis;
+
+  /// حقل أعلى المستند لا داخل `analysis` — عمدًا: `analysis` تُستبدل كاملة
+  /// مع كل تحليل، فعلَم «هذا عنوان يدوي» لو سكن داخلها لانمحى مع أول
+  /// إعادة تحليل، وهي بالضبط اللحظة اللي وُجد عشانها.
+  final bool titleEditedByUser;
+
+  String? get title => analysis?.title;
 
   bool get hasTranscript => (transcript?.trim().isNotEmpty ?? false);
 
@@ -111,6 +119,7 @@ class RemoteRecording {
       analysis: rawAnalysis is Map<String, dynamic>
           ? RecordingAnalysis.fromMap(rawAnalysis)
           : null,
+      titleEditedByUser: map['titleEditedByUser'] as bool? ?? false,
     );
   }
 }
@@ -125,7 +134,12 @@ class RecordingAnalysis {
     required this.goals,
     required this.ideas,
     required this.topics,
+    this.title,
   });
+
+  /// عنوان قصير يولّده نفس نداء التحليل. `null` لتسجيل حُلِّل قبل إضافة
+  /// الحقل — الحقل مطلوب بالمخطط، فغيابه يعني «قديم» لا «رفضه الموديل».
+  final String? title;
 
   final List<String> tasks;
   final List<String> goals;
@@ -145,7 +159,11 @@ class RecordingAnalysis {
   }
 
   factory RecordingAnalysis.fromMap(Map<String, dynamic> map) {
+    final rawTitle = map['title'];
     return RecordingAnalysis(
+      title: rawTitle is String && rawTitle.trim().isNotEmpty
+          ? rawTitle.trim()
+          : null,
       tasks: _strings(map['tasks']),
       goals: _strings(map['goals']),
       ideas: _strings(map['ideas']),

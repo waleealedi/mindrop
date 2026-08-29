@@ -19,7 +19,7 @@
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const ANALYSIS_MODEL = 'openai/gpt-oss-120b';
 
-/// المخطط مقصود بساطته: أربعة حقول، كلها مصفوفات نصوص.
+/// المخطط مقصود بساطته: عنوان قصير + أربعة حقول، كلها مصفوفات نصوص.
 ///
 /// **ليش نصوص بسيطة مو كائنات فيها حقول إضافية** (أولوية، تاريخ استحقاق،
 /// إلخ): كل حقل اختياري زائد هو دعوة مفتوحة للموديل يخترع قيمة ما قالها
@@ -28,11 +28,18 @@ const ANALYSIS_MODEL = 'openai/gpt-oss-120b';
 ///
 /// `strict: true` مع `additionalProperties: false` يخلي Groq يرفض أي ناتج
 /// خارج الشكل بدل ما يمرّره لنا.
+/// **`title` مطلوب لا اختياري** — نفس منطق بقية الحقول بالضبط. الحقل
+/// الاختياري بمخطط صارم يعطي الموديل إذنًا صريحًا بتخطّيه، والعنوان الناقص
+/// يعني صفًا بلا هوية بالقائمة. مطلوب = يجي دائمًا.
+///
+/// وهو **نص واحد لا مصفوفة**: عنوان واحد لكل تسجيل، فالمصفوفة تدعو الموديل
+/// يقترح بدائل ما طلبناها ثم نختار منها عشوائيًا.
 const EXTRACTION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['tasks', 'goals', 'ideas', 'topics'],
+  required: ['title', 'tasks', 'goals', 'ideas', 'topics'],
   properties: {
+    title: { type: 'string' },
     tasks: { type: 'array', items: { type: 'string' } },
     goals: { type: 'array', items: { type: 'string' } },
     ideas: { type: 'array', items: { type: 'string' } },
@@ -51,6 +58,9 @@ const SYSTEM_PROMPT = [
   '3. Extract ONLY what the speaker actually said. Never invent, infer, or complete a thought.',
   '4. Empty arrays are correct and expected for a short recording. Do not pad.',
   '',
+  'title   = 3-6 words naming what this recording is about. Describe only what',
+  '          was actually said — never add a topic the speaker did not mention.',
+  '          No quotes, no trailing period, no "Recording about ..." preamble.',
   'tasks   = concrete actions the speaker intends to do',
   'goals   = outcomes they want, without a concrete action',
   'ideas   = thoughts/observations that are neither task nor goal',
@@ -108,12 +118,24 @@ export async function analyze(transcript) {
 
 /// تحقّق دفاعي بعد الحزمة: نمر بـ `strict` من Groq، لكن ما نثق بالمزوّد
 /// وحده. أي انحراف عن الشكل يرمي بصوت عالٍ بدل ما يُخزَّن ناتج مشوّه.
-function validateExtraction(value) {
+export function validateExtraction(value) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('ناتج التحليل لازم يكون كائن JSON.');
   }
 
   const out = {};
+
+  // العنوان نص مفرد، فله فحصه الخاص قبل حلقة المصفوفات.
+  //
+  // نقصّه على 120 محرفًا: المخطط يفرض النوع لا الطول، وموديل يقرر يكتب
+  // فقرة بدل عنوان يكسر تخطيط الصف. القصّ هنا لا بالواجهة — نبي القيمة
+  // المخزّنة نفسها معقولة، لا أن تبدو معقولة بشاشة وحدة.
+  const title = value.title;
+  if (typeof title !== 'string') {
+    throw new Error('ناتج التحليل: الحقل "title" لازم يكون نصًا.');
+  }
+  out.title = title.trim().replace(/\s+/g, ' ').slice(0, 120);
+
   for (const key of ['tasks', 'goals', 'ideas', 'topics']) {
     const list = value[key];
     if (!Array.isArray(list)) {

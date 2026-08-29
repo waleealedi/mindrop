@@ -73,6 +73,8 @@ class RecordingDraft {
     this.status = RecordingStatus.recorded,
     this.retryCount = 0,
     this.errorMessage,
+    this.title,
+    this.titleEditedByUser = false,
   });
 
   final String id;
@@ -84,6 +86,21 @@ class RecordingDraft {
   int retryCount;
   String? errorMessage;
 
+  /// عنوان التسجيل المحفوظ محليًا.
+  ///
+  /// `null` يعني ما فيه عنوان محلي — لا أن العنوان فاضي. العنوان الذي
+  /// يولّده الذكاء يعيش بمستند Firestore وحده ولا يُنسخ هنا: نسخه يعني
+  /// كتابة قرص إضافية لكل وصول تحليل، والنص المفرَّغ (البديل التالي
+  /// بسلسلة العرض) سحابي أصلًا، فالغياب متطابق بالحالتين.
+  String? title;
+
+  /// هل كتب المستخدم هذا العنوان بيده؟
+  ///
+  /// حين تكون `true` لا يجوز لأي تحليل لاحق أن يستبدله — لا محليًا ولا
+  /// بالباك-إند (انظر `saveAnalysis`). التسمية اليدوية نيّة صريحة، والعنوان
+  /// المولَّد تخمين مهما كان جيدًا.
+  bool titleEditedByUser;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'filePath': filePath,
@@ -92,6 +109,8 @@ class RecordingDraft {
         'status': status.name,
         'retryCount': retryCount,
         'errorMessage': errorMessage,
+        'title': title,
+        'titleEditedByUser': titleEditedByUser,
       };
 
   factory RecordingDraft.fromJson(Map<String, dynamic> json) {
@@ -106,6 +125,34 @@ class RecordingDraft {
       ),
       retryCount: json['retryCount'] as int? ?? 0,
       errorMessage: json['errorMessage'] as String?,
+      // فهرس قديم (سُجّل قبل هذي الميزة) ما فيه المفتاحين — الافتراضيات
+      // تخلي كل تسجيل سابق يقرأ كـ«بلا عنوان»، وهو الصحيح تمامًا.
+      title: json['title'] as String?,
+      titleEditedByUser: json['titleEditedByUser'] as bool? ?? false,
     );
   }
+}
+
+/// العنوان المعروض لتسجيل واحد، أو `null` لو ما فيه عنوان بعد.
+///
+/// **سلسلة الأولوية، وليش بهذا الترتيب:**
+/// 1. تسمية المستخدم اليدوية — نيّة صريحة، تتغلّب على كل شي دائمًا.
+/// 2. عنوان الذكاء من التحليل السحابي.
+/// 3. عنوان محلي غير يدوي، إن وُجد.
+///
+/// ترجّع `null` بدل نص بديل عمدًا: البديل (النص المفرَّغ المقصوص، ثم اسم
+/// الحالة) قرار **عرض** يخص كل شاشة، وحشره هنا يجبر الشاشتين على نفس
+/// الشكل. كل تسجيل قديم سُجّل قبل هذي الميزة يمر من هنا بـ `null` فيرجع
+/// للسلوك السابق حرفيًا.
+String? resolveRecordingTitle(RecordingDraft draft, String? remoteTitle) {
+  String? clean(String? s) {
+    final v = s?.trim();
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
+  if (draft.titleEditedByUser) {
+    final manual = clean(draft.title);
+    if (manual != null) return manual;
+  }
+  return clean(remoteTitle) ?? clean(draft.title);
 }

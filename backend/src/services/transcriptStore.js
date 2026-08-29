@@ -66,9 +66,39 @@ export async function markAnalyzing(uid, recordingId) {
 
 /// نهاية الخط: المحتوى المنظّم جاهز.
 export async function saveAnalysis(uid, recordingId, analysis) {
-  await docRef(uid, recordingId).set(
+  const ref = docRef(uid, recordingId);
+
+  // العنوان اللي عدّله المستخدم بيده يفوز على أي عنوان يولّده الموديل.
+  //
+  // **ليش يحتاج حماية أصلًا وما فيه مسار إعادة تحليل صريح:** `analysis`
+  // خريطة متداخلة، و`merge: true` يستبدلها كاملة لا يدمج داخلها. فأي مرور
+  // ثانٍ على نفس التسجيل يمسح `analysis.title`. والمرور الثاني ممكن فعلًا:
+  // تسجيل فشل تفريغه (أو فشلت كتابة النص بـ Firestore) يعيده الطابور،
+  // و`hasStoredTranscript` وقتها ترجّع false فيمشي الخط كامل من جديد.
+  //
+  // نقرأ قبل الكتابة عمدًا رغم إنها قراءة إضافية: تصير مرة وحدة بعمر
+  // التسجيل، وثمنها لا شيء مقابل مسح تسمية كتبها المستخدم بنفسه.
+  let finalAnalysis = analysis;
+  try {
+    const snap = await ref.get();
+    const data = snap.exists ? snap.data() : null;
+    const existingTitle = data?.analysis?.title;
+    if (
+      data?.titleEditedByUser === true &&
+      typeof existingTitle === 'string' &&
+      existingTitle.trim().length > 0
+    ) {
+      finalAnalysis = { ...analysis, title: existingTitle };
+    }
+  } catch (err) {
+    // ما قدرنا نقرأ؟ نكمل بعنوان الموديل. فقدان تسمية يدوية أسوأ من
+    // فقدان التحليل كله، لكن إيقاف التحليل عشان قراءة فاشلة أسوأ منهما.
+    console.error(`[${recordingId}] تعذّر فحص العنوان اليدوي:`, err.message);
+  }
+
+  await ref.set(
     {
-      analysis,
+      analysis: finalAnalysis,
       status: 'completed',
       analyzedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

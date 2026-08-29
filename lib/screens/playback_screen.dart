@@ -227,6 +227,11 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
     final createdAt = widget.draft.createdAt;
     final date = DateFormat.yMMMd(localeName).format(createdAt);
     final time = DateFormat.jm(localeName).format(createdAt);
+    final title = resolveRecordingTitle(widget.draft, widget.analysis?.title);
+
+    // فاصل محايد اتجاهيًا: يشتغل بالعربي والإنجليزي بدون علامة ترقيم
+    // خاصة بلغة وحدة.
+    final stamp = '$date · $time';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 6, 20, 6),
@@ -240,17 +245,45 @@ class _PlaybackScreenState extends State<PlaybackScreen> {
           ),
           const SizedBox(width: 4),
           Expanded(
-            child: Text(
-              // فاصل محايد اتجاهيًا: يشتغل بالعربي والإنجليزي بدون علامة
-              // ترقيم خاصة بلغة وحدة.
-              '$date · $time',
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: MindropColors.crimsonOnSurface,
-              ),
-            ),
+            // بلا عنوان يبقى الطابع الزمني هو الترويسة كما كان بالضبط.
+            // مع عنوان ينزل الطابع سطرًا ثانيًا صغيرًا بدل ما يختفي: هو
+            // الطريقة الوحيدة لتمييز تسجيلين بنفس الموضوع.
+            child: title == null
+                ? Text(
+                    stamp,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: MindropColors.crimsonOnSurface,
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // العنوان محتوى مستخدم — اتجاهه من حروفه هو.
+                      TranscriptText(
+                        title,
+                        maxLines: 1,
+                        style: MindropFonts.style(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: MindropColors.crimsonOnSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        stamp,
+                        overflow: TextOverflow.ellipsis,
+                        style: MindropFonts.monoStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w400,
+                          color: MindropColors.crimsonOutline,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
