@@ -12,6 +12,7 @@ import '../services/draft_store.dart';
 import '../services/firestore_sync_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ambient_background.dart';
+import '../widgets/recording_actions_sheet.dart';
 import '../widgets/rename_dialog.dart';
 import '../widgets/transcript_text.dart';
 import 'playback_screen.dart';
@@ -133,108 +134,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
   ///
   /// **ورقة سفلية لا `PopupMenu`:** الصف يمتد بعرض الشاشة، والقائمة
   /// المنبثقة عند نقطة اللمس تطلع بمكان مختلف كل مرة. الورقة تجي من نفس
-  /// الحافة دائمًا وتوصلها الإبهام، وهي كمان تسع سطر عنوان يقول **أي**
-  /// تسجيل نتعامل معه — سؤال حقيقي بقائمة صفوفها متشابهة.
+  /// الحافة دائمًا وتوصلها الإبهام، وتسع سطرًا يقول **أي** تسجيل نتعامل
+  /// معه — سؤال حقيقي بقائمة صفوفها متشابهة.
   ///
-  /// بلا `BackdropFilter`: سطح مصمت من نفس التوكنات، نفس قاعدة بطاقات
-  /// القائمة بالضبط.
+  /// الشكل والحركة والضباب كلها بـ [showRecordingActionsSheet]؛ هنا نقرر
+  /// الإجراءات وترتيبها فقط.
   Future<void> _showActions(RecordingDraft draft, String? title) async {
     final t = AppLocalizations.of(context)!;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: MindropColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            // مقبض بصري يقول «هذي ورقة تُسحب» — بلا نص، فما يحتاج ترجمة.
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: MindropColors.crimsonOutline.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            if (title != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 2),
-                // العنوان محتوى مستخدم — اتجاهه من حروفه.
-                child: TranscriptText(
-                  title,
-                  maxLines: 1,
-                  style: MindropFonts.style(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: MindropColors.crimsonOnSurface,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-            _action(
-              ctx,
-              icon: Icons.edit_outlined,
-              label: t.rename,
-              onTap: () => _rename(draft, title),
-            ),
-            _action(
-              ctx,
-              icon: draft.pinned ? Icons.push_pin : Icons.push_pin_outlined,
-              label: draft.pinned ? t.unpin : t.pin,
-              onTap: () => _togglePin(draft),
-            ),
-            _action(
-              ctx,
-              icon: Icons.ios_share_rounded,
-              label: t.share,
-              onTap: () => _share(draft),
-            ),
-            _action(
-              ctx,
-              icon: Icons.delete_outline,
-              label: t.delete,
-              // الحذف وحده ملوّن: هو الوحيد بالقائمة اللي ما له تراجع.
-              color: MindropColors.errorRed,
-              onTap: () => _confirmDelete(draft),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
+    // سطر الترويسة: العنوان إن وُجد، وإلا مقتطف من النص المفرَّغ. نصّان
+    // موجودان أصلًا بالصف — ما نجيب شيئًا جديدًا لأجل الورقة.
+    final headline = title ?? _remote[draft.id]?.transcript?.trim();
 
-  /// صف واحد بورقة الإجراءات.
-  ///
-  /// يقفل الورقة **قبل** تنفيذ الإجراء: كل الإجراءات تفتح حوارًا أو ورقة
-  /// نظام فوقها، وتركها مفتوحة تحتها يكدّس طبقتين على بعض.
-  Widget _action(
-    BuildContext sheetContext, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    Color? color,
-  }) {
-    final tint = color ?? MindropColors.crimsonOnSurface;
-    return ListTile(
-      leading: Icon(icon, size: 21, color: tint),
-      title: Text(
-        label,
-        style: MindropFonts.style(
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-          color: tint,
+    await showRecordingActionsSheet(
+      context,
+      headline: (headline != null && headline.isNotEmpty) ? headline : null,
+      semanticLabel: t.recordingActions,
+      actions: [
+        RecordingAction(
+          icon: Icons.edit_outlined,
+          label: t.rename,
+          onSelected: () => _rename(draft, title),
         ),
-      ),
-      onTap: () {
-        Navigator.pop(sheetContext);
-        onTap();
-      },
+        RecordingAction(
+          icon: draft.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+          label: draft.pinned ? t.unpin : t.pin,
+          onSelected: () => _togglePin(draft),
+        ),
+        RecordingAction(
+          icon: Icons.ios_share_rounded,
+          label: t.share,
+          onSelected: () => _share(draft),
+        ),
+        RecordingAction(
+          icon: Icons.delete_outline,
+          label: t.delete,
+          // الوحيد بلا تراجع — يُفصل بنبرته وبفاصل فوقه.
+          destructive: true,
+          onSelected: () => _confirmDelete(draft),
+        ),
+      ],
     );
   }
 

@@ -726,6 +726,46 @@ same rule as the cards.
 `Semantics(onLongPressHint:)` is on the row because a long-press has no visual
 affordance at all; without it a screen-reader user cannot discover the menu.
 
+### The sheet's styling — and the one blur carve-out it takes
+
+[recording_actions_sheet.dart](lib/widgets/recording_actions_sheet.dart) owns
+the look; the screen only decides which actions exist and in what order.
+
+- **`showGeneralDialog`, not `showModalBottomSheet`.** The latter accepts a
+  barrier *colour* and nothing more. A frosted backdrop is a `BackdropFilter`
+  layer covering the screen behind the sheet, which needs a full-screen
+  `pageBuilder` — so the route is built by hand. Dismissal is a `GestureDetector`
+  on the blur layer rather than `barrierDismissible`, because the blur sits above
+  the barrier and would otherwise swallow the tap.
+- **Icon chips reuse the shipped convention exactly**: circle filled at
+  `alpha: 0.14`, which is the same value the row's status chip uses. Rename /
+  Pin / Share take `crimsonPrimaryContainer` for the chip and `crimsonPrimary`
+  for the glyph — live crimson behind, text-safe crimson on top. Delete takes
+  `errorRed` for both, plus a divider and extra spacing above it. **No new tone
+  and no new alpha were introduced.**
+- **Radius is 16**, matching `dialogTheme.shape` in `MindropTheme.dark()`. There
+  is no radius *token* in this project — every other radius is a per-component
+  literal (cards 16, playback card 28, record dock 36) — and 16 is the only one
+  defined at theme level. The sheet is dialog-family, so it takes the dialog
+  value. It previously used an arbitrary 24.
+- **Rows are ~64pt** (12pt vertical padding around a 40pt chip) rather than
+  `ListTile`'s ~56, and the sheet is short enough that the extra height costs
+  nothing.
+- **Motion rides the route's own animation** — fade + a 0.97→1 scale anchored to
+  `bottomCenter` + a 6% slide. No `AnimationController`, no extra `Ticker`.
+
+**Blur exception, deliberate and bounded.** The no-`BackdropFilter` rule targets
+blur inside a scrolling list or above a surface that repaints per frame. This is
+neither: the sheet only opens once scrolling has stopped, what sits behind it is
+static while it is up, and the layer is transient — one filter, gone on dismiss.
+Same carve-out the record dock takes. **The list itself still has no blur.**
+
+RTL needs nothing special here: layout uses `EdgeInsetsDirectional` and `Row`,
+which mirror on their own, and none of the four glyphs (`edit`, `push_pin`,
+`ios_share`, `delete`) is directional. The headline routes through
+`TranscriptText`, so it follows its own content's direction rather than the UI
+locale — the same rule as every other piece of user text.
+
 ### Pinned section sits above the date groups, not inside them
 
 Pinned recordings are **partitioned out before** `_groupLabel` runs, and do not
