@@ -68,32 +68,34 @@ export async function markAnalyzing(uid, recordingId) {
 export async function saveAnalysis(uid, recordingId, analysis) {
   const ref = docRef(uid, recordingId);
 
-  // العنوان اللي عدّله المستخدم بيده يفوز على أي عنوان يولّده الموديل.
+  // نسخ التسمية اليدوية داخل `analysis` عشان النسختان ما تتناقضان.
   //
-  // **ليش يحتاج حماية أصلًا وما فيه مسار إعادة تحليل صريح:** `analysis`
-  // خريطة متداخلة، و`merge: true` يستبدلها كاملة لا يدمج داخلها. فأي مرور
-  // ثانٍ على نفس التسجيل يمسح `analysis.title`. والمرور الثاني ممكن فعلًا:
-  // تسجيل فشل تفريغه (أو فشلت كتابة النص بـ Firestore) يعيده الطابور،
-  // و`hasStoredTranscript` وقتها ترجّع false فيمشي الخط كامل من جديد.
+  // **الحماية الحقيقية بنيوية لا هنا:** التسمية اليدوية تسكن حقل `title`
+  // أعلى المستند، والعميل ما يكتب داخل `analysis` أبدًا. فإعادة التحليل
+  // تكتب `analysis.title` وحدها وما تقدر تمس التسمية اليدوية إطلاقًا.
   //
-  // نقرأ قبل الكتابة عمدًا رغم إنها قراءة إضافية: تصير مرة وحدة بعمر
-  // التسجيل، وثمنها لا شيء مقابل مسح تسمية كتبها المستخدم بنفسه.
+  // (تصحيح لملاحظة سابقة: `merge: true` بـ Firestore يدمج الخرائط
+  // المتداخلة تكراريًا، ما يستبدلها كاملة. لكن `analysis` القادمة من
+  // الموديل تحمل `title` دائمًا، فبدون هذا النسخ يبقى بالمستند عنوانان
+  // مختلفان — اليدوي فوق والمولَّد بالداخل.)
+  //
+  // القراءة تصير مرة وحدة بعمر التسجيل، فثمنها لا شيء.
   let finalAnalysis = analysis;
   try {
     const snap = await ref.get();
     const data = snap.exists ? snap.data() : null;
-    const existingTitle = data?.analysis?.title;
+    const manualTitle = data?.title;
     if (
       data?.titleEditedByUser === true &&
-      typeof existingTitle === 'string' &&
-      existingTitle.trim().length > 0
+      typeof manualTitle === 'string' &&
+      manualTitle.trim().length > 0
     ) {
-      finalAnalysis = { ...analysis, title: existingTitle };
+      finalAnalysis = { ...analysis, title: manualTitle.trim() };
     }
   } catch (err) {
-    // ما قدرنا نقرأ؟ نكمل بعنوان الموديل. فقدان تسمية يدوية أسوأ من
-    // فقدان التحليل كله، لكن إيقاف التحليل عشان قراءة فاشلة أسوأ منهما.
-    console.error(`[${recordingId}] تعذّر فحص العنوان اليدوي:`, err.message);
+    // ما قدرنا نقرأ؟ نكمل بعنوان الموديل. التسمية اليدوية بأمان بأي حال
+    // لأنها بحقل ثاني — أسوأ نتيجة هنا تناقض داخلي ما يشوفه المستخدم.
+    console.error(`[${recordingId}] تعذّر فحص التسمية اليدوية:`, err.message);
   }
 
   await ref.set(

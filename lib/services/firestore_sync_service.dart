@@ -37,6 +37,33 @@ class FirestoreSyncService {
     }, SetOptions(merge: true));
   }
 
+  /// يكتب تسمية المستخدم اليدوية.
+  ///
+  /// **حقل `title` أعلى المستند، ولا نقترب من `analysis`** — انظر
+  /// [RemoteRecording.userTitle] لسبب الفصل. `titleEditedByUser` يُرفع معه
+  /// بنفس الكتابة عشان ما تصير لحظة فيها اسم يدوي بلا علمه.
+  ///
+  /// best-effort مثل [syncMetadata]: التسمية محفوظة محليًا قبل هذا النداء،
+  /// وفشل الشبكة ما يجوز يمنع المستخدم من تسمية فكرته.
+  Future<void> updateTitle(String recordingId, String title) async {
+    final ref = await _recordingsRef();
+    await ref.doc(recordingId).set({
+      'title': title,
+      'titleEditedByUser': true,
+      'updatedAt': DateTime.now().toIso8601String(),
+    }, SetOptions(merge: true));
+  }
+
+  /// يكتب حالة التثبيت. نسخة احتياطية سحابية؛ العرض محلي (انظر
+  /// [RecordingDraft.pinned]).
+  Future<void> updatePinned(String recordingId, bool pinned) async {
+    final ref = await _recordingsRef();
+    await ref.doc(recordingId).set({
+      'pinned': pinned,
+      'updatedAt': DateTime.now().toIso8601String(),
+    }, SetOptions(merge: true));
+  }
+
   /// يحذف مستندات تسجيلات من السحابة.
   ///
   /// **يرمي عند الفشل عمدًا** — بعكس [syncMetadata] الـ best-effort. الحذف
@@ -89,7 +116,9 @@ class RemoteRecording {
     this.status,
     this.errorMessage,
     this.analysis,
+    this.userTitle,
     this.titleEditedByUser = false,
+    this.pinned = false,
   });
 
   final String? transcript;
@@ -97,12 +126,30 @@ class RemoteRecording {
   final String? errorMessage;
   final RecordingAnalysis? analysis;
 
-  /// حقل أعلى المستند لا داخل `analysis` — عمدًا: `analysis` تُستبدل كاملة
-  /// مع كل تحليل، فعلَم «هذا عنوان يدوي» لو سكن داخلها لانمحى مع أول
-  /// إعادة تحليل، وهي بالضبط اللحظة اللي وُجد عشانها.
+  /// تسمية المستخدم اليدوية — **حقل أعلى المستند، منفصل تمامًا عن
+  /// `analysis`**.
+  ///
+  /// وهذا الفصل هو الحماية نفسها، لا مجرد ترتيب: العميل ما يكتب داخل
+  /// `analysis` إطلاقًا، والباك-إند ما يكتب خارجها. فأي إعادة تحليل تكتب
+  /// `analysis.title` وحدها ولا تقدر تمس التسمية اليدوية أصلًا — بنيويًا،
+  /// لا بفحص وقت التشغيل.
+  ///
+  /// ولها سبب ثانٍ: الكتابة داخل `analysis` من العميل تنشئ خريطة تحليل
+  /// فاضية لتسجيل ما تحلّل بعد، فتقرأها شاشة الاستماع كـ«ما فيه شي
+  /// نستخرجه» بينما التحليل لسا شغّال — كذبة على المستخدم.
+  final String? userTitle;
+
   final bool titleEditedByUser;
 
-  String? get title => analysis?.title;
+  /// نسخة سحابية للنسخ الاحتياطي؛ العرض يقرأ المحلي وحده.
+  final bool pinned;
+
+  /// اليدوي يتغلّب على المولَّد دائمًا.
+  String? get title {
+    final manual = userTitle?.trim();
+    if (manual != null && manual.isNotEmpty) return manual;
+    return analysis?.title;
+  }
 
   bool get hasTranscript => (transcript?.trim().isNotEmpty ?? false);
 
@@ -119,7 +166,9 @@ class RemoteRecording {
       analysis: rawAnalysis is Map<String, dynamic>
           ? RecordingAnalysis.fromMap(rawAnalysis)
           : null,
+      userTitle: map['title'] as String?,
       titleEditedByUser: map['titleEditedByUser'] as bool? ?? false,
+      pinned: map['pinned'] as bool? ?? false,
     );
   }
 }

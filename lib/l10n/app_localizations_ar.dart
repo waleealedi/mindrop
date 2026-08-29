@@ -171,6 +171,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String get analysisPending => 'جارِ تنظيم الفكرة…';
 
   @override
+  String get recordingActions => 'خيارات التسجيل';
+
+  @override
+  String get rename => 'إعادة تسمية';
+
+  @override
+  String get renameTitle => 'إعادة تسمية التسجيل';
+
+  @override
+  String get renameHint => 'العنوان';
+
+  @override
+  String get save => 'حفظ';
+
+  @override
+  String get share => 'مشاركة';
+
+  @override
+  String get shareNothingYet =>
+      'ما فيه شي نشاركه بعد — هذا التسجيل بلا نص مفرَّغ';
+
+  @override
+  String get pin => 'تثبيت';
+
+  @override
+  String get unpin => 'إلغاء التثبيت';
+
+  @override
+  String get historyPinned => 'المثبَّتة';
+
+  @override
   String get a11yStartRecording => 'بدء التسجيل';
 
   @override

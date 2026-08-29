@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 // `show DateFormat` مقصود: حزمة intl تصدّر صنف `TextDirection` خاص فيها
 // يحجب `TextDirection` تبع Flutter لو استوردناها كاملة.
 import 'package:intl/intl.dart' show DateFormat;
+import 'package:share_plus/share_plus.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/recording_draft.dart';
@@ -125,6 +126,209 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     await DraftStore.instance.remove(draft.id);
     await _load();
+  }
+
+  /// قائمة الإجراءات على الضغط المطوّل.
+  ///
+  /// **ورقة سفلية لا `PopupMenu`:** الصف يمتد بعرض الشاشة، والقائمة
+  /// المنبثقة عند نقطة اللمس تطلع بمكان مختلف كل مرة. الورقة تجي من نفس
+  /// الحافة دائمًا وتوصلها الإبهام، وهي كمان تسع سطر عنوان يقول **أي**
+  /// تسجيل نتعامل معه — سؤال حقيقي بقائمة صفوفها متشابهة.
+  ///
+  /// بلا `BackdropFilter`: سطح مصمت من نفس التوكنات، نفس قاعدة بطاقات
+  /// القائمة بالضبط.
+  Future<void> _showActions(RecordingDraft draft, String? title) async {
+    final t = AppLocalizations.of(context)!;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: MindropColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            // مقبض بصري يقول «هذي ورقة تُسحب» — بلا نص، فما يحتاج ترجمة.
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: MindropColors.crimsonOutline.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            if (title != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 2),
+                // العنوان محتوى مستخدم — اتجاهه من حروفه.
+                child: TranscriptText(
+                  title,
+                  maxLines: 1,
+                  style: MindropFonts.style(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: MindropColors.crimsonOnSurface,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            _action(
+              ctx,
+              icon: Icons.edit_outlined,
+              label: t.rename,
+              onTap: () => _rename(draft, title),
+            ),
+            _action(
+              ctx,
+              icon: draft.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+              label: draft.pinned ? t.unpin : t.pin,
+              onTap: () => _togglePin(draft),
+            ),
+            _action(
+              ctx,
+              icon: Icons.ios_share_rounded,
+              label: t.share,
+              onTap: () => _share(draft),
+            ),
+            _action(
+              ctx,
+              icon: Icons.delete_outline,
+              label: t.delete,
+              // الحذف وحده ملوّن: هو الوحيد بالقائمة اللي ما له تراجع.
+              color: MindropColors.errorRed,
+              onTap: () => _confirmDelete(draft),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// صف واحد بورقة الإجراءات.
+  ///
+  /// يقفل الورقة **قبل** تنفيذ الإجراء: كل الإجراءات تفتح حوارًا أو ورقة
+  /// نظام فوقها، وتركها مفتوحة تحتها يكدّس طبقتين على بعض.
+  Widget _action(
+    BuildContext sheetContext, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    final tint = color ?? MindropColors.crimsonOnSurface;
+    return ListTile(
+      leading: Icon(icon, size: 21, color: tint),
+      title: Text(
+        label,
+        style: MindropFonts.style(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: tint,
+        ),
+      ),
+      onTap: () {
+        Navigator.pop(sheetContext);
+        onTap();
+      },
+    );
+  }
+
+  /// حوار إعادة التسمية.
+  ///
+  /// يرفع `titleEditedByUser` — من تلك اللحظة ما يجوز لأي تحليل لاحق
+  /// يستبدل الاسم (انظر [RecordingDraft.titleEditedByUser]).
+  Future<void> _rename(RecordingDraft draft, String? current) async {
+    final t = AppLocalizations.of(context)!;
+    final controller = TextEditingController(text: current ?? '');
+
+    final value = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.renameTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 120,
+          // نفس سقف الباك-إند بالضبط، فما يقدر المستخدم يكتب عنوانًا
+          // أطول مما يسمح به المخزَّن.
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(labelText: t.renameHint),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(t.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(t.save),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    final trimmed = value?.trim();
+    // إلغاء أو نص فاضي = ما صار شي. ما نمسح العنوان بنص فاضي: المسح نيّة
+    // مختلفة عن التسمية، وما طلبها أحد.
+    if (trimmed == null || trimmed.isEmpty) return;
+
+    draft.title = trimmed;
+    draft.titleEditedByUser = true;
+    await DraftStore.instance.update(draft);
+
+    // سحابي best-effort بعد المحلي — نفس سياسة الكتابة بالتطبيق كله.
+    unawaited(_bestEffort(
+      () => FirestoreSyncService.instance.updateTitle(draft.id, trimmed),
+    ));
+
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _togglePin(RecordingDraft draft) async {
+    draft.pinned = !draft.pinned;
+    await DraftStore.instance.update(draft);
+    unawaited(_bestEffort(
+      () => FirestoreSyncService.instance.updatePinned(draft.id, draft.pinned),
+    ));
+    if (mounted) setState(() {});
+  }
+
+  /// يشارك **النص المفرَّغ وحده**. الصوت خارج النطاق هذي الجولة.
+  ///
+  /// بلا نص ما فيه شي نشاركه: مشاركة عنوان بلا محتوى تعطي المستلم لا شيء،
+  /// فنقولها صراحةً بدل ما نفتح ورقة نظام فاضية.
+  Future<void> _share(RecordingDraft draft) async {
+    final t = AppLocalizations.of(context)!;
+    final transcript = _remote[draft.id]?.transcript?.trim();
+
+    if (transcript == null || transcript.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(t.shareNothingYet)));
+      return;
+    }
+
+    final title = resolveRecordingTitle(draft, _remote[draft.id]?.title);
+    await SharePlus.instance.share(
+      ShareParams(text: transcript, subject: title),
+    );
+  }
+
+  /// كتابة سحابية ما يجوز فشلها يوقف عملًا محليًا تم أصلًا.
+  Future<void> _bestEffort(Future<void> Function() fn) async {
+    try {
+      await fn();
+    } catch (_) {
+      // تجاهل عمدًا — المحلي هو مصدر الحقيقة.
+    }
   }
 
   /// نفس فكرة [_confirmDelete] لكن لكل التسجيلات دفعة وحدة. عملية أخطر
@@ -314,8 +518,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
     // نبني قائمة مسطّحة فيها عناوين المجموعات بين البطاقات، بدل قائمة
     // متداخلة: `ListView.builder` يبقى كسولًا فما نخسر أداء التمرير.
     final rows = <_Row>[];
+
+    // **المثبَّتة تُقسَّم قبل تجميع التواريخ، وما تدخله إطلاقًا.**
+    //
+    // التقسيم فوق المنطق القائم لا بداخله: `_groupLabel` ما تغيّرت، وتسجيل
+    // مثبَّت يخرج من تدفّق التواريخ كليًا بدل ما يتكرر بمكانين. لو بقي
+    // بالاثنين لصار نفس الصف مرتين بنفس القائمة، وحذفه من أحدهما يبدو
+    // كأنه ما انحذف من الثاني.
+    //
+    // الترتيب داخل كل قسم يبقى ترتيب [DraftStore] نفسه (الأحدث أولًا).
+    final pinned = _drafts.where((d) => d.pinned);
+    final rest = _drafts.where((d) => !d.pinned);
+
+    if (pinned.isNotEmpty) {
+      rows.add(_Row.header(t.historyPinned));
+      rows.addAll(pinned.map(_Row.tile));
+    }
+
     String? lastGroup;
-    for (final d in _drafts) {
+    for (final d in rest) {
       final g = _groupLabel(d.createdAt, t, localeName);
       if (g != lastGroup) {
         rows.add(_Row.header(g));
@@ -411,165 +632,165 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
       // يقصّ تموّج الضغط (ink) على الزوايا الدائرية بدل ما يطلع مربعًا.
       clipBehavior: Clip.antiAlias,
-      child: Row(
-        children: [
-          // الضغط على البطاقة يفتح شاشة الاستماع. زر الحذف مستثنى من
-          // منطقة الضغط عمدًا: نية الحذف ما تفتح شاشة.
-          Expanded(
-            child: Material(
-              // شفاف: وظيفته إعطاء InkWell سطحًا يرسم عليه التموّج فوق
-              // خلفية البطاقة، مو تغيير اللون.
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => _openPlayback(draft),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 4, 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: visual.color.withValues(alpha: 0.14),
-                        ),
-                        // لما يوصل النص المفرَّغ يصير هو العنوان وتبقى
-                        // الحالة أيقونة فقط — بدون تسمية ما يقدر قارئ
-                        // الشاشة يعرفها إطلاقًا.
-                        child: Semantics(
-                          label: visual.label,
-                          child:
-                              Icon(visual.icon, size: 20, color: visual.color),
-                        ),
-                      ),
-                      const SizedBox(width: 13),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+      // البطاقة كلها منطقة ضغط واحدة الحين: ضغطة تفتح الاستماع، وضغطة
+      // مطوّلة تفتح الإجراءات.
+      child: Material(
+        // شفاف: وظيفته إعطاء InkWell سطحًا يرسم عليه التموّج فوق
+        // خلفية البطاقة، مو تغيير اللون.
+        color: Colors.transparent,
+        child: Semantics(
+          // الضغط المطوّل ما له أي أثر بصري يكشفه — بدون هذا ما فيه طريقة
+          // يعرف بها مستخدم قارئ الشاشة إن هناك إجراءات أصلًا.
+          onLongPressHint: AppLocalizations.of(context)!.recordingActions,
+          child: InkWell(
+            onTap: () => _openPlayback(draft),
+            onLongPress: () => _showActions(draft, title),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: visual.color.withValues(alpha: 0.14),
+                    ),
+                    // لما يوصل النص المفرَّغ يصير هو العنوان وتبقى
+                    // الحالة أيقونة فقط — بدون تسمية ما يقدر قارئ
+                    // الشاشة يعرفها إطلاقًا.
+                    child: Semantics(
+                      label: visual.label,
+                      child: Icon(visual.icon, size: 20, color: visual.color),
+                    ),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // سلسلة الهوية، من الأدق للأعم:
+                        //   عنوان (يدوي أو من الذكاء)
+                        //   ← النص المفرَّغ مقصوصًا
+                        //   ← اسم الحالة.
+                        // العنوان أدق لأنه ملخّص للتسجيل كله، بينما
+                        // النص المقصوص أول سطرين وبس — وقد يكونان
+                        // تمهيدًا لا يقول شيئًا. التسجيلات المسجّلة قبل
+                        // هذي الميزة ما عندها عنوان فتنزل للبديل نفسه
+                        // اللي كانت عليه بالضبط.
+                        if (title != null)
+                          // العنوان محتوى مستخدم مثل النص تمامًا —
+                          // اتجاهه من حروفه هو لا من لغة الواجهة.
+                          TranscriptText(
+                            title,
+                            maxLines: 2,
+                            style: MindropFonts.style(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.35,
+                              color: MindropColors.crimsonOnSurface,
+                            ),
+                          )
+                        else if (remote?.hasTranscript ?? false)
+                          // اتجاه النص من محتواه هو مو من لغة الواجهة
+                          // (راجع [TranscriptText]). بقية البطاقة —
+                          // التاريخ والمدة والحالة — تبقى على لغة
+                          // التطبيق.
+                          TranscriptText(
+                            remote!.transcript!.trim(),
+                            // سطرين كحد أقصى: يثبّت سقف ارتفاع البطاقة
+                            // مهما طال التفريغ أو اختلف اتجاهه، فما
+                            // ينكسر التخطيط ولا يتأثر أداء التمرير.
+                            maxLines: 2,
+                            style: MindropFonts.style(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.35,
+                              color: MindropColors.crimsonOnSurface,
+                            ),
+                          )
+                        else
+                          Text(
+                            visual.label,
+                            style: MindropFonts.style(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              color: MindropColors.crimsonOnSurface,
+                            ),
+                          ),
+                        const SizedBox(height: 4),
+                        Row(
                           children: [
-                            // سلسلة الهوية، من الأدق للأعم:
-                            //   عنوان (يدوي أو من الذكاء)
-                            //   ← النص المفرَّغ مقصوصًا
-                            //   ← اسم الحالة.
-                            // العنوان أدق لأنه ملخّص للتسجيل كله، بينما
-                            // النص المقصوص أول سطرين وبس — وقد يكونان
-                            // تمهيدًا لا يقول شيئًا. التسجيلات المسجّلة قبل
-                            // هذي الميزة ما عندها عنوان فتنزل للبديل نفسه
-                            // اللي كانت عليه بالضبط.
-                            if (title != null)
-                              // العنوان محتوى مستخدم مثل النص تمامًا —
-                              // اتجاهه من حروفه هو لا من لغة الواجهة.
-                              TranscriptText(
-                                title,
-                                maxLines: 2,
-                                style: MindropFonts.style(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.35,
-                                  color: MindropColors.crimsonOnSurface,
-                                ),
-                              )
-                            else if (remote?.hasTranscript ?? false)
-                              // اتجاه النص من محتواه هو مو من لغة الواجهة
-                              // (راجع [TranscriptText]). بقية البطاقة —
-                              // التاريخ والمدة والحالة — تبقى على لغة
-                              // التطبيق.
-                              TranscriptText(
-                                remote!.transcript!.trim(),
-                                // سطرين كحد أقصى: يثبّت سقف ارتفاع البطاقة
-                                // مهما طال التفريغ أو اختلف اتجاهه، فما
-                                // ينكسر التخطيط ولا يتأثر أداء التمرير.
-                                maxLines: 2,
-                                style: MindropFonts.style(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.35,
-                                  color: MindropColors.crimsonOnSurface,
-                                ),
-                              )
-                            else
-                              Text(
-                                visual.label,
-                                style: MindropFonts.style(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: MindropColors.crimsonOnSurface,
-                                ),
+                            if (draft.pinned) ...[
+                              // الدبوس بالصف نفسه، لا بقسم المثبَّتة
+                              // وحده: البطاقة تُقرأ لوحدها بورقة
+                              // الإجراءات وبقارئ الشاشة، بعيدًا عن
+                              // عنوان القسم.
+                              Icon(
+                                Icons.push_pin,
+                                size: 14,
+                                color: MindropColors.crimsonPrimary,
                               ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                // أيقونة ثابتة تقول «هذا مقطع صوتي» — نفسها
-                                // بكل صف، ما تُشتق من أي شي بالتسجيل.
-                                //
-                                // **كانت أعمدة موجة مشتقّة من تجزئة المعرّف،
-                                // وأُزيلت عمدًا.** شكل الموجة يحمل معنى محددًا
-                                // لمن يشوفه: القمم والقيعان تُقرأ كـ«هذا ما فعله
-                                // الصوت فعلًا». نمط مشتق من تجزئة لا يطابق
-                                // التسجيل أبدًا يكسر هذا التوقّع بهدوء، حتى لو
-                                // كان ثابتًا لكل تسجيل. وهذا تطبيق كل مبدأه ألا
-                                // يضيف شيئًا فوق ما قاله المستخدم — نفس سبب
-                                // وجود حارس الهلوسة بجهة التفريغ. أيقونة رمزية
-                                // ما تدّعي شيئًا، فما فيها المشكلة.
-                                Icon(
-                                  Icons.waves_rounded,
-                                  size: 17,
-                                  color: MindropColors.crimsonPrimaryContainer
-                                      .withValues(alpha: 0.85),
-                                ),
-                                const SizedBox(width: 9),
-                                Text(
-                                  _formatDuration(
-                                      Duration(milliseconds: draft.durationMs)),
-                                  // المدة رموز زمنية مو نص لغوي — تبقى LTR بكل اللغات
-                                  // عشان ما تنقلب "01:20" إلى "20:01" بواجهة عربية.
-                                  textDirection: TextDirection.ltr,
-                                  style: metaStyle,
-                                ),
-                                const SizedBox(width: 7),
-                                Container(
-                                  width: 3,
-                                  height: 3,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: MindropColors.crimsonOutline
-                                        .withValues(alpha: 0.7),
-                                  ),
-                                ),
-                                const SizedBox(width: 7),
-                                Expanded(
-                                  child: Text(
-                                    // فاصل محايد اتجاهيًا: يشتغل بالعربي والإنجليزي
-                                    // بدون ما نكتب علامة ترقيم خاصة بلغة وحدة.
-                                    '$date · $time',
-                                    style: metaStyle,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                              const SizedBox(width: 7),
+                            ],
+                            // أيقونة ثابتة تقول «هذا مقطع صوتي» — نفسها
+                            // بكل صف، ما تُشتق من أي شي بالتسجيل.
+                            //
+                            // **كانت أعمدة موجة مشتقّة من تجزئة المعرّف،
+                            // وأُزيلت عمدًا.** شكل الموجة يحمل معنى محددًا
+                            // لمن يشوفه: القمم والقيعان تُقرأ كـ«هذا ما فعله
+                            // الصوت فعلًا». نمط مشتق من تجزئة لا يطابق
+                            // التسجيل أبدًا يكسر هذا التوقّع بهدوء، حتى لو
+                            // كان ثابتًا لكل تسجيل. وهذا تطبيق كل مبدأه ألا
+                            // يضيف شيئًا فوق ما قاله المستخدم — نفس سبب
+                            // وجود حارس الهلوسة بجهة التفريغ. أيقونة رمزية
+                            // ما تدّعي شيئًا، فما فيها المشكلة.
+                            Icon(
+                              Icons.waves_rounded,
+                              size: 17,
+                              color: MindropColors.crimsonPrimaryContainer
+                                  .withValues(alpha: 0.85),
+                            ),
+                            const SizedBox(width: 9),
+                            Text(
+                              _formatDuration(
+                                  Duration(milliseconds: draft.durationMs)),
+                              // المدة رموز زمنية مو نص لغوي — تبقى LTR بكل اللغات
+                              // عشان ما تنقلب "01:20" إلى "20:01" بواجهة عربية.
+                              textDirection: TextDirection.ltr,
+                              style: metaStyle,
+                            ),
+                            const SizedBox(width: 7),
+                            Container(
+                              width: 3,
+                              height: 3,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: MindropColors.crimsonOutline
+                                    .withValues(alpha: 0.7),
+                              ),
+                            ),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Text(
+                                // فاصل محايد اتجاهيًا: يشتغل بالعربي والإنجليزي
+                                // بدون ما نكتب علامة ترقيم خاصة بلغة وحدة.
+                                '$date · $time',
+                                style: metaStyle,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 6),
-            child: IconButton(
-              onPressed: () => _confirmDelete(draft),
-              icon: const Icon(Icons.delete_outline),
-              iconSize: 21,
-              color: MindropColors.crimsonOnSurfaceVariant,
-              tooltip: t.delete,
-              visualDensity: VisualDensity.compact,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -66,6 +66,20 @@
 
   "analysisPending": "جارِ تنظيم الفكرة…",
 
+  "recordingActions": "خيارات التسجيل",
+
+  "rename": "إعادة تسمية",
+  "renameTitle": "إعادة تسمية التسجيل",
+  "renameHint": "العنوان",
+  "save": "حفظ",
+
+  "share": "مشاركة",
+  "shareNothingYet": "ما فيه شي نشاركه بعد — هذا التسجيل بلا نص مفرَّغ",
+
+  "pin": "تثبيت",
+  "unpin": "إلغاء التثبيت",
+  "historyPinned": "المثبَّتة",
+
   "a11yStartRecording": "بدء التسجيل",
   "a11yStopRecording": "إيقاف التسجيل",
   "a11yPlayRecording": "تشغيل التسجيل",

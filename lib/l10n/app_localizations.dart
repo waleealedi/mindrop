@@ -386,6 +386,66 @@ abstract class AppLocalizations {
   /// **'Organising this idea…'**
   String get analysisPending;
 
+  /// Accessibility label for the long-press menu on a recording row
+  ///
+  /// In en, this message translates to:
+  /// **'Recording options'**
+  String get recordingActions;
+
+  /// No description provided for @rename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get rename;
+
+  /// No description provided for @renameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename recording'**
+  String get renameTitle;
+
+  /// Placeholder inside the rename dialog text field
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get renameHint;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @share.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get share;
+
+  /// Shown when share is tapped on a recording whose transcript has not arrived
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to share yet — this recording has no transcript'**
+  String get shareNothingYet;
+
+  /// No description provided for @pin.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get pin;
+
+  /// No description provided for @unpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get unpin;
+
+  /// Section header above pinned recordings, shown before the date groups
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get historyPinned;
+
   /// No description provided for @a11yStartRecording.
   ///
   /// In en, this message translates to:

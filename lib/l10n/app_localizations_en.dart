@@ -167,6 +167,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analysisPending => 'Organising this idea…';
 
   @override
+  String get recordingActions => 'Recording options';
+
+  @override
+  String get rename => 'Rename';
+
+  @override
+  String get renameTitle => 'Rename recording';
+
+  @override
+  String get renameHint => 'Title';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get shareNothingYet =>
+      'Nothing to share yet — this recording has no transcript';
+
+  @override
+  String get pin => 'Pin';
+
+  @override
+  String get unpin => 'Unpin';
+
+  @override
+  String get historyPinned => 'Pinned';
+
+  @override
   String get a11yStartRecording => 'Start recording';
 
   @override

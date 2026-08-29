@@ -700,6 +700,45 @@ Drawing the real thing is also blocked from the other side: it means decoding
 every audio file inside a scrolling list, which the performance rule exists to
 prevent. So the row gets a symbol, which claims nothing.
 
+### Long-press menu — and why the row's delete icon is gone
+
+Long-pressing a row opens a bottom sheet: Rename, Pin/Unpin, Share, Delete.
+The per-row `IconButton(delete)` was **removed**, not kept alongside it.
+
+That was a judgement call, and the reasoning is the part worth keeping. Once a
+menu exists, leaving delete outside it makes the single irreversible action the
+only one with a one-tap affordance — permanently parked under the thumb, in a
+list you scroll. Every other action needs two deliberate steps and the
+destructive one needs none. The confirm dialog is the only thing between a
+mis-scroll and a deleted audio file, and a dialog you have taught yourself to
+dismiss is not a safeguard. Removing it also lets the whole card be one hit
+target instead of an `Expanded` + an excluded button.
+
+`deleteAll` in the header stays exactly as it was — it is aimed, not something
+you brush past while scrolling.
+
+A **bottom sheet, not a `PopupMenu`**: rows span the screen, so a menu anchored
+at the touch point lands somewhere different every time, and the sheet has room
+for a title line naming *which* recording is about to be acted on — a real
+question in a list of near-identical rows. Solid `surface`, no `BackdropFilter`,
+same rule as the cards.
+
+`Semantics(onLongPressHint:)` is on the row because a long-press has no visual
+affordance at all; without it a screen-reader user cannot discover the menu.
+
+### Pinned section sits above the date groups, not inside them
+
+Pinned recordings are **partitioned out before** `_groupLabel` runs, and do not
+appear in the date groups at all. The grouping logic is untouched.
+
+Not appearing twice is the whole point: the same row under both "Pinned" and
+"Today" means deleting it from one place looks like it survived in the other.
+Order inside each section stays `DraftStore` order (newest first).
+
+`pinned` is **local-first and read locally only.** The Firestore copy is a
+best-effort backup that the UI never reads back — reading it would let a late
+cloud value un-pin something the user just pinned.
+
 ### Not built, deliberately
 
 - **Timestamped caption blocks.** Stitch's journal panel splits the transcript
@@ -783,6 +822,66 @@ metadata and the backend writes results into the **same** Firestore doc
   stateless Express server, and every stage already runs after the 200 has gone back
   to the phone. So this step adds no latency to the save by construction. See
   **Persistent topics** below.
+
+---
+
+## Recording titles
+
+Every recording gets a short title from the **same** Groq call that returns
+tasks/goals/ideas/topics — one request, no new dependency. It is not a
+client-side truncation of the transcript: the first two lines of a spoken
+thought are often preamble, and the premise here is that organisation is the
+model's job.
+
+- **`title` is required in the schema, not optional.** Same rule as the four
+  array fields: an optional field in a `strict` schema is explicit permission to
+  skip it, and a missing title leaves a row with no identity. It is a single
+  string, not an array, so the model is not invited to offer alternatives we
+  would then pick from arbitrarily.
+- `validateExtraction` trims, collapses whitespace, and **caps at 120 chars** —
+  the schema constrains type, not length, and a model that writes a paragraph
+  breaks the row layout. An empty title passes validation rather than throwing:
+  throwing would lose the whole analysis over a label, and the UI already has a
+  fallback chain.
+
+### The manual title is a separate field, and that *is* the protection
+
+Two fields, two writers, no overlap:
+
+| Field | Written by | Meaning |
+|---|---|---|
+| `analysis.title` | backend only | the model's title |
+| `title` (top level) | client only | what the user typed |
+| `titleEditedByUser` (top level) | client only | provenance flag |
+
+**The client never writes inside `analysis`, and the backend never writes
+outside it.** So a re-analysis cannot touch a manual title — structurally, not
+by a runtime check. There is no explicit re-analysis endpoint, but a second pass
+is reachable: a recording whose transcript write failed gets requeued,
+`hasStoredTranscript` then returns false, and the pipeline runs again.
+
+Writing the manual title into `analysis` was rejected for a second reason: on a
+recording that has not been analysed yet it would create an `analysis` map with
+empty arrays, which playback reads as "nothing to extract" while analysis is
+still running.
+
+`saveAnalysis` still reads before writing, but only to **mirror** a manual title
+into `analysis.title` so the two never disagree. It is tidiness, not the
+safeguard. (Correcting an earlier note: Firestore's `merge: true` **does** merge
+nested maps recursively — it does not replace them wholesale. The mirror is
+needed because the model's `analysis` always carries a `title` key of its own,
+not because the map gets replaced.)
+
+### Display fallback, in order
+
+`resolveRecordingTitle` returns manual → model → local, or **`null`** — never a
+substitute string. The substitute is a display decision each screen makes for
+itself: history falls back to the truncated transcript, then the status label;
+playback falls back to the timestamp it always showed.
+
+Recordings made before this feature have no title in either place, resolve to
+`null`, and render exactly as they did before. That is the whole compatibility
+story — there is no migration.
 
 ---
 

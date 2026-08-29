@@ -51,6 +51,10 @@ dependencies:
   # مباشرة، راجع التعليق فوق.
   http: ^1.6.0
 
+  # ورقة المشاركة الأصلية للنظام. الحزمة الرسمية من flutter_community،
+  # وما فيها بديل داخل SDK — المشاركة قناة نظام لا واجهة Flutter.
+  share_plus: ^13.3.0
+
 dev_dependencies:
   # يولّد أيقونات المشغّل الأصلية من assets/icon/ — أداة بناء وقت التطوير
   # فقط، ما تدخل الـAPK. الإعداد بملف flutter_launcher_icons.yaml مستقل،

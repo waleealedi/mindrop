@@ -75,6 +75,7 @@ class RecordingDraft {
     this.errorMessage,
     this.title,
     this.titleEditedByUser = false,
+    this.pinned = false,
   });
 
   final String id;
@@ -101,6 +102,13 @@ class RecordingDraft {
   /// المولَّد تخمين مهما كان جيدًا.
   bool titleEditedByUser;
 
+  /// مثبَّت أعلى القائمة.
+  ///
+  /// المحلي هو مصدر الحقيقة هنا كبقية التطبيق؛ النسخة السحابية كتابة
+  /// best-effort للنسخ الاحتياطي وحده، وما تُقرأ عند العرض. قراءتها كانت
+  /// راح تخلي قيمة سحابية متأخرة تفكّ تثبيتًا فعله المستخدم للتو.
+  bool pinned;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'filePath': filePath,
@@ -111,6 +119,7 @@ class RecordingDraft {
         'errorMessage': errorMessage,
         'title': title,
         'titleEditedByUser': titleEditedByUser,
+        'pinned': pinned,
       };
 
   factory RecordingDraft.fromJson(Map<String, dynamic> json) {
@@ -129,6 +138,7 @@ class RecordingDraft {
       // تخلي كل تسجيل سابق يقرأ كـ«بلا عنوان»، وهو الصحيح تمامًا.
       title: json['title'] as String?,
       titleEditedByUser: json['titleEditedByUser'] as bool? ?? false,
+      pinned: json['pinned'] as bool? ?? false,
     );
   }
 }

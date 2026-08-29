@@ -109,6 +109,32 @@
     "description": "Shown on the playback screen while backend analysis is still running"
   },
 
+  "recordingActions": "Recording options",
+  "@recordingActions": {
+    "description": "Accessibility label for the long-press menu on a recording row"
+  },
+
+  "rename": "Rename",
+  "renameTitle": "Rename recording",
+  "renameHint": "Title",
+  "@renameHint": {
+    "description": "Placeholder inside the rename dialog text field"
+  },
+  "save": "Save",
+
+  "share": "Share",
+  "shareNothingYet": "Nothing to share yet — this recording has no transcript",
+  "@shareNothingYet": {
+    "description": "Shown when share is tapped on a recording whose transcript has not arrived"
+  },
+
+  "pin": "Pin",
+  "unpin": "Unpin",
+  "historyPinned": "Pinned",
+  "@historyPinned": {
+    "description": "Section header above pinned recordings, shown before the date groups"
+  },
+
   "a11yStartRecording": "Start recording",
   "a11yStopRecording": "Stop recording",
   "a11yPlayRecording": "Play recording",
