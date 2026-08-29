@@ -739,6 +739,54 @@ Order inside each section stays `DraftStore` order (newest first).
 best-effort backup that the UI never reads back — reading it would let a late
 cloud value un-pin something the user just pinned.
 
+### The rename crash: `_dependents.isEmpty`, and why that was the wrong file to look in
+
+Renaming from the sheet threw on-device:
+
+```
+framework.dart:6281  Failed assertion: '_dependents.isEmpty': is not true
+```
+
+That assertion lives in `InheritedElement.debugDeactivated()` and it is the
+**last** error in a cascade, not the first. The device's red screen truncates to
+the tail, which makes it read like an `InheritedWidget` problem. It is not.
+
+The real fault was one line: `controller.dispose()` immediately after
+`await showDialog(...)`.
+
+`showDialog`'s future completes on `Navigator.pop` — `Route.didPop` calls
+`didComplete` right away, while `finalizeRoute` (which actually unmounts the
+subtree) waits for the exit transition. So the line after `await` runs with the
+dialog **still mounted and animating out**. Then:
+
+1. the `TextEditingController` is disposed while `EditableText` still listens;
+2. the transition ends, the framework unmounts, `EditableText.dispose()` calls
+   `controller.removeListener(...)` on a disposed `ChangeNotifier` → throws
+   **inside** the `deactivate`/`unmount` walk;
+3. the walk aborts, leaving the dialog's `InheritedElement`s (`Localizations`,
+   `MediaQuery`, `Theme`) deactivated with dependents still registered;
+4. `assert(_dependents.isEmpty)` fires.
+
+Reproduced host-side, and the chain prints in full — `A TextEditingController
+was used after being disposed` → `object.dart:3687 'attached'` →
+`framework.dart:6281 '_dependents.isEmpty'`, the same line as the device.
+
+**The fix is ownership, not a `mounted` guard.**
+[rename_dialog.dart](lib/widgets/rename_dialog.dart) is a `StatefulWidget` that
+creates the controller in `initState` and disposes it in `dispose`. The
+framework unmounts depth-first, so `EditableText.dispose()` (the
+`removeListener`) runs *before* the controller is freed. The lifetime mismatch
+is gone by construction.
+
+`test/rename_dialog_test.dart` is the regression guard. The load-bearing part is
+**`pumpAndSettle()` after the dialog closes** — it runs the exit transition to
+completion, which is the only window the bug existed in. A test that stops at a
+single `pump()` passes on the broken code.
+
+The general rule this leaves behind: **never dispose a controller after
+`await showDialog` / `await showModalBottomSheet`.** The route outlives the
+await. Own it in a `State` inside the route's own subtree.
+
 ### Not built, deliberately
 
 - **Timestamped caption blocks.** Stitch's journal panel splits the transcript

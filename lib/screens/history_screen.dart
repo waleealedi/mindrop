@@ -12,6 +12,7 @@ import '../services/draft_store.dart';
 import '../services/firestore_sync_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ambient_background.dart';
+import '../widgets/rename_dialog.dart';
 import '../widgets/transcript_text.dart';
 import 'playback_screen.dart';
 
@@ -237,42 +238,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  /// حوار إعادة التسمية.
+  /// إعادة التسمية.
+  ///
+  /// الحوار ودجت مستقلة تملك متحكّم النص بنفسها — وهذا مو ترتيبًا: النسخة
+  /// اللي كانت تنشئ المتحكّم هنا وتحرّره بعد `await showDialog` انهارت على
+  /// الجهاز. التفصيل الكامل بـ [RenameDialog].
   ///
   /// يرفع `titleEditedByUser` — من تلك اللحظة ما يجوز لأي تحليل لاحق
   /// يستبدل الاسم (انظر [RecordingDraft.titleEditedByUser]).
   Future<void> _rename(RecordingDraft draft, String? current) async {
-    final t = AppLocalizations.of(context)!;
-    final controller = TextEditingController(text: current ?? '');
-
-    final value = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(t.renameTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 120,
-          // نفس سقف الباك-إند بالضبط، فما يقدر المستخدم يكتب عنوانًا
-          // أطول مما يسمح به المخزَّن.
-          textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(labelText: t.renameHint),
-          onSubmitted: (v) => Navigator.pop(ctx, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(t.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(t.save),
-          ),
-        ],
-      ),
-    );
-
-    controller.dispose();
+    final value = await showRenameDialog(context, initialTitle: current);
 
     final trimmed = value?.trim();
     // إلغاء أو نص فاضي = ما صار شي. ما نمسح العنوان بنص فاضي: المسح نيّة
