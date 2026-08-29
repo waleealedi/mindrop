@@ -462,6 +462,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       itemCount: rows.length,
+      // **كل صف بمفتاح ثابت.** بدونها يطابق `ListView.builder` العناصر
+      // بموضعها لا بهويتها، وقسم «المثبَّتة» يعيد الترتيب فعلًا: تثبيت
+      // تسجيل ينقله لأعلى القائمة، فيرث عنصرُ الموضع القديم تسجيلًا آخر.
+      // الصف نفسه بلا حالة، لكن `InkWell` و`Material` تحتهما حالة تموّج —
+      // فالنتيجة تموّج ضغطة يظهر على صف غير الذي ضُغط.
+      //
+      // العناوين كمان: قائمة نصف مُفتاحة تبقى تطابق العناوين بالموضع،
+      // وظهور قسم «المثبَّتة» أو اختفاؤه يزحزح كل ما بعده بمقدار واحد.
       itemBuilder: (context, i) {
         final row = rows[i];
         final draft = row.draft;
@@ -487,6 +495,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildGroupHeader(String label, bool first) {
     return Padding(
+      // العناوين فريدة داخل القائمة الواحدة («المثبَّتة»، «اليوم»، «أمس»،
+      // ثم تواريخ منسّقة)، فالنص نفسه مفتاح ثابت كافٍ.
+      key: ValueKey('header:$label'),
       padding: EdgeInsets.fromLTRB(4, first ? 8 : 20, 4, 10),
       child: Text(
         label.toUpperCase(),
@@ -534,6 +545,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
 
     return Container(
+      key: ValueKey(draft.id),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         // Crimson: بطاقات بزوايا 1rem على السطح المرتفع. حاوية عادية لا
