@@ -114,8 +114,13 @@ Diagnose without rebuilding: `adb logcat -c`, close and reopen the app, then
 
 ### Device & machine
 
-Physical device only: `R5CY821BZQF` (SM-S938B, Android 16 / **API 36**). No
-emulator — the dev machine is an 8GB MacBook Air M2.
+Physical device only — one Android phone on **API 36**, no emulator. **Read the
+serial fresh from `adb devices` every time; it is deliberately not recorded here
+or anywhere else in the repo.**
+
+The dev machine has **8 GB of RAM**, which is the entire reason
+`android/gradle.properties` is reduced — see **Performance**. That number is
+load-bearing for the build config, so it stays.
 
 `network_security_config.xml` permits cleartext for `localhost` / `127.0.0.1` /
 `::1` / `10.0.2.2` **only**. Android blocks cleartext since API 28, and the
@@ -965,6 +970,27 @@ metadata and the backend writes results into the **same** Firestore doc
 - Analysis schema is four required string arrays with **no optional fields** — every
   optional field invites the model to invent a value nobody said, and a hallucinated
   task is the worst failure this product can produce.
+- **The upload endpoint is rate limited per uid, and that is a *cost* guard.**
+  Sign-in is anonymous and the client key ships in the APK, so anyone can mint a
+  legitimate ID token for this project — it proves "an account here", not "the
+  owner". Every accepted upload then buys a Whisper call and an LLM call on the
+  owner's account. `uploadRateLimit` caps it at **10/hour**, keyed on `req.uid`
+  from `verifyToken` — **never IP**, which changes per network and is shared
+  behind NAT, so it would punish the innocent and barely inconvenience anyone
+  else. It sits *after* `verifyToken` (it needs the uid) and *before* `multer`
+  (rejecting after multer means paying the bandwidth and disk write for a request
+  already refused). The store is in memory, so a Render restart resets it — a
+  real ceiling needs a shared store, which is a new paid dependency and therefore
+  the owner's call.
+- **`transcribeInBackground` must never reject, and now cannot.** It is called
+  without `await` after the response has gone back to the phone, so nothing is
+  waiting on it and nothing catches it. Since Node 15 an unhandled rejection
+  **terminates the process** — one bad recording would take the server down for
+  everyone. The inner layers already catch their expected failures; the outer
+  `catch` is for the unexpected, including a throw from inside `finally`, which
+  outranks everything before it and would escape an outer catch placed only
+  around the body. The `.catch()` at the call site is a deliberate second guard:
+  cheaper than trusting that the contract survives the next edit.
 - **Persistent topics run after `saveAnalysis`, never before.** There are no Cloud
   Functions in this repo and no `functions/` directory — the whole pipeline is the
   stateless Express server, and every stage already runs after the 200 has gone back

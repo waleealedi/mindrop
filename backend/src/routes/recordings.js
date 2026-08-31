@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { uploadRateLimit } from '../middleware/uploadRateLimit.js';
 import { verifyToken } from '../middleware/verifyToken.js';
 import { transcribe } from '../services/transcription.js';
 import { analyze } from '../services/analysis.js';
@@ -76,13 +77,33 @@ function validateRecordingId(req, res, next) {
 ///
 /// ولو فيه تفريغ سابق لنفس التسجيل، نتخطاه: إعادة رفع نفس الملف ما تعيد
 /// الدفع لنفس النتيجة.
+/// **عقد هذي الدالة: لا ترفض أبدًا.**
+///
+/// تُنادى بلا `await` بعد ما رجع الرد للجوال، فما فيه أحد ينتظرها ولا أحد
+/// يلتقط رفضها. ومنذ Node 15 السلوك الافتراضي للرفض غير الملتقط هو **إنهاء
+/// العملية**، يعني خطأ بمعالجة تسجيل واحد يسقط السيرفر لكل المستخدمين.
+///
+/// الطبقات الداخلية (`processRecording` و`analyzeInBackground` و`bestEffort`)
+/// تلتقط أخطاءها المتوقعة أصلًا، فهذا حزام أمان لغير المتوقع: رمية متزامنة
+/// قبل أول `await`، أو مسار جديد يضيفه أحد لاحقًا وينسى حراسته. الطبقة
+/// الخارجية أرخص من الاعتماد على أن كل طبقة داخلية ستبقى محروسة للأبد.
 async function transcribeInBackground(audioPath, recordingId, uid) {
   try {
     await processRecording(audioPath, recordingId, uid);
+  } catch (err) {
+    // ما نعيد الرمي: ما فيه مستدعٍ يلتقط، وإعادة الرمي هي بالضبط الشي
+    // اللي نمنعه هنا.
+    console.error(`[${recordingId}] خطأ غير متوقع بالمعالجة:`, err);
   } finally {
-    // يمشي على كل المسارات — نجاح، فشل، أو تخطّي — فما يتراكم أي صوت على
-    // القرص المؤقت. الجوال يحتفظ بالنسخة الدائمة.
-    await discardAudio(audioPath, recordingId);
+    try {
+      // يمشي على كل المسارات — نجاح، فشل، أو تخطّي — فما يتراكم أي صوت على
+      // القرص المؤقت. الجوال يحتفظ بالنسخة الدائمة.
+      await discardAudio(audioPath, recordingId);
+    } catch (err) {
+      // `discardAudio` تلتقط أخطاءها بنفسها، لكن رمية من `finally` تتغلّب
+      // على كل ما سبقها وتهرب من الـ`catch` اللي فوق — فتُحرس هنا أيضًا.
+      console.error(`[${recordingId}] تعذّر تنظيف الصوت المؤقت:`, err);
+    }
   }
 }
 
@@ -201,11 +222,18 @@ async function bestEffort(fn) {
 
 const router = Router();
 
-// verifyToken أول شي بالسلسلة — يحدد req.uid قبل ما multer يبدأ يقرر وين
-// يحفظ الملف. لو التوكن غير صالح نرجع 401 وما نوصل حتى لمرحلة الملف.
+// ترتيب السلسلة مقصود بالكامل:
+//   verifyToken      يحدد req.uid قبل أي شي — بلا توكن صالح نرجع 401 وما
+//                    نوصل حتى لمرحلة الملف.
+//   uploadRateLimit  بعده مباشرة لأنه **يحتاج req.uid** مفتاحًا، وقبل
+//                    multer عمدًا: الرفض بعد multer يعني إننا استقبلنا
+//                    الحمولة وكتبناها على القرص ثم رميناها — ندفع النطاق
+//                    والـI/O مقابل طلب رفضناه أصلًا.
+//   validateRecordingId ثم multer.
 router.post(
   '/recordings/:recordingId',
   verifyToken,
+  uploadRateLimit,
   validateRecordingId,
   upload.single('audio'),
   (req, res) => {
@@ -222,7 +250,13 @@ router.post(
 
     // بعد الرد — بدون await عمدًا (راجع تعليق الدالة).
     // uid يجي من verifyToken، فالكتابة بـ Firestore تروح لمستند صاحبه فعلًا.
-    transcribeInBackground(req.file.path, req.params.recordingId, req.uid);
+    //
+    // `.catch()` هنا زائد عن الحاجة بحكم أن الدالة نفسها ما ترفض — وهذا
+    // مقصود: حارسان مستقلان أرخص من الاعتماد على أن أحدهما ما ينكسر بتعديل
+    // لاحق. ولو انكسر العقد، هذا السطر يمنع سقوط العملية.
+    transcribeInBackground(req.file.path, req.params.recordingId, req.uid).catch(
+      (err) => console.error(`[${req.params.recordingId}] رفض غير متوقع:`, err),
+    );
   },
 );
 
