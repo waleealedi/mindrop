@@ -80,6 +80,9 @@
   "unpin": "إلغاء التثبيت",
   "historyPinned": "المثبَّتة",
 
+  "recordingDeleted": "انحذف التسجيل",
+  "undo": "تراجع",
+
   "a11yStartRecording": "بدء التسجيل",
   "a11yStopRecording": "إيقاف التسجيل",
   "a11yPlayRecording": "تشغيل التسجيل",

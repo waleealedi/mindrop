@@ -202,6 +202,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get historyPinned => 'المثبَّتة';
 
   @override
+  String get recordingDeleted => 'انحذف التسجيل';
+
+  @override
+  String get undo => 'تراجع';
+
+  @override
   String get a11yStartRecording => 'بدء التسجيل';
 
   @override

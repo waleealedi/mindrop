@@ -446,6 +446,18 @@ abstract class AppLocalizations {
   /// **'Pinned'**
   String get historyPinned;
 
+  /// Snackbar shown after a recording is removed from the list, alongside an Undo action
+  ///
+  /// In en, this message translates to:
+  /// **'Recording deleted'**
+  String get recordingDeleted;
+
+  /// Action on the delete snackbar that restores the recording before the deletion is committed
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
+
   /// No description provided for @a11yStartRecording.
   ///
   /// In en, this message translates to:

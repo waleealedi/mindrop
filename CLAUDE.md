@@ -783,17 +783,48 @@ long-press start details, and adding a second gesture recogniser over it puts tw
 recognisers in the arena for the same touch. `Listener` sees the raw pointer
 before the gesture layer, so it competes with nothing.
 
-### Delete has no undo, and nothing here pretends otherwise
+### Delete waits five seconds before it means anything
 
-`DraftStore.remove` deletes the `.m4a` from disk and drops the index entry
-immediately. The `DeletionQueueService` tombstone is **not** an undo buffer —
-it is a `List<String>` of ids whose whole purpose is the opposite, guaranteeing
-the *cloud* copy gets deleted too. Nothing anywhere retains a restorable copy.
+Confirming the dialog no longer deletes. It hides the row, shows a snackbar with
+**Undo**, and only commits when that snackbar closes without the action being
+tapped. `DraftStore.remove` and `DeletionQueueService` are untouched — the delay
+sits entirely in front of them.
 
-So the red tint is differentiation, not a safety net. The actual barrier is the
-pre-existing confirm dialog in `_confirmDelete`. **A real undo would require
-keeping deleted audio somewhere for a grace period — a storage-lifecycle
-decision, not a styling one.**
+**The row is never removed from `_drafts`.** It is filtered out of
+`_visibleDrafts` and nothing else. That is what makes "restore to its original
+position" free: the list never changed, so undo is just dropping the filter.
+Removing and re-inserting at a saved index would go wrong the moment anything
+else reorders the list — a pin, or a reload landing mid-window.
+
+**This is a grace window, not a trash can.** Kill the app mid-window and the
+recording simply survives; the deletion is lost, not the data. That is the safe
+direction of the two, and it is why nothing is persisted to disk to track it.
+
+`_PendingDelete.settled` is load-bearing. The same pending delete can be settled
+from two directions — its snackbar closing, or a *second* delete committing it
+early — and which arrives first is not guaranteed. The flag makes both paths
+idempotent instead of racing to delete twice.
+
+Deleting again while a window is open **commits the first immediately** and opens
+a fresh window for the second. Two live undo bars would raise "which one does
+this undo?", a question with no good answer.
+
+`dispose` commits any open window rather than dropping it: the user already
+confirmed, and the window expired by leaving. It also hides the snackbar, using a
+`ScaffoldMessengerState` captured in `didChangeDependencies` — `ScaffoldMessenger.of`
+is not legal inside `dispose`. Without that, an Undo button outlives the screen
+and silently does nothing.
+
+**Five seconds, not the app's usual two.** Every other snackbar here is a
+confirmation you read and forget; this one asks for a decision, and two seconds
+is not long enough to notice it and reach for it.
+
+The snackbar builds its own solid surface because `snackBarTheme` sets
+`backgroundColor: Colors.transparent`. A plain `SnackBar` in this app renders
+with no surface at all — worth knowing, since
+[history_screen.dart](lib/screens/history_screen.dart)'s share-failure snackbar
+still does exactly that. Solid `surface`, not `GlassContainer`: it floats over a
+scrolling list, which is precisely what the blur rule forbids.
 
 ### Pinned section sits above the date groups, not inside them
 

@@ -135,6 +135,15 @@
     "description": "Section header above pinned recordings, shown before the date groups"
   },
 
+  "recordingDeleted": "Recording deleted",
+  "@recordingDeleted": {
+    "description": "Snackbar shown after a recording is removed from the list, alongside an Undo action"
+  },
+  "undo": "Undo",
+  "@undo": {
+    "description": "Action on the delete snackbar that restores the recording before the deletion is committed"
+  },
+
   "a11yStartRecording": "Start recording",
   "a11yStopRecording": "Stop recording",
   "a11yPlayRecording": "Play recording",

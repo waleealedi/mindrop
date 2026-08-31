@@ -198,6 +198,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyPinned => 'Pinned';
 
   @override
+  String get recordingDeleted => 'Recording deleted';
+
+  @override
+  String get undo => 'Undo';
+
+  @override
   String get a11yStartRecording => 'Start recording';
 
   @override

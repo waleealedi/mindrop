@@ -33,6 +33,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<RecordingDraft> _drafts = const <RecordingDraft>[];
   bool _loading = true;
 
+  /// الحذف المعلّق الحالي، إن وُجد. واحد فقط بأي لحظة.
+  _PendingDelete? _pending;
+
+  /// نمسك المُرسِل مبكرًا عشان نقدر نغلق الشريط داخل `dispose`.
+  /// `ScaffoldMessenger.of(context)` ممنوع هناك — الـ`context` بطريقه للفكّ.
+  ScaffoldMessengerState? _messenger;
+
   /// آخر نقطة لمس بإحداثيات الشاشة — مرساة منبثقة الإجراءات.
   ///
   /// نلتقطها بـ `Listener` بدل `onLongPressStart` تبع `GestureDetector`:
@@ -53,13 +60,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.of(context);
+  }
+
+  @override
   void dispose() {
     // المستمع يعيش بعمر هذي الشاشة فقط — راجع تعليق _listenRemote.
     _remoteSub?.cancel();
+
+    // خروج المستخدم من الشاشة والحذف لسا معلّق = تأكيد ضمني: هو أكّد
+    // الحذف بالحوار، والنافذة انتهت بلا تراجع. ننفّذه بلا انتظار — ما
+    // نقدر ننتظر داخل `dispose`، والحذف نفسه لا يعتمد على هذي الشاشة.
+    final pending = _pending;
+    if (pending != null && !pending.settled) {
+      pending.settled = true;
+      // ونغلق الشريط معه: زر «تراجع» يبقى معروضًا بعد فكّ الشاشة وهو
+      // ما عاد يقدر يرجّع شيئًا — كذبة صغيرة نتفاداها.
+      _messenger?.hideCurrentSnackBar();
+      unawaited(DraftStore.instance.remove(pending.draft.id));
+    }
     super.dispose();
   }
 
   // ---------------------------------------------------------------- منطق
+
+  /// القائمة كما تُعرض: كل شيء عدا الحذف المعلّق.
+  ///
+  /// الاستثناء بالعرض لا بالبيانات — `_drafts` تبقى كاملة، فالتراجع يرجّع
+  /// التسجيل لمكانه بلا أي حساب فهارس.
+  List<RecordingDraft> get _visibleDrafts {
+    final hidden = _pending?.draft.id;
+    if (hidden == null) return _drafts;
+    return _drafts.where((d) => d.id != hidden).toList(growable: false);
+  }
 
   Future<void> _load() async {
     final drafts = await DraftStore.instance.all();
@@ -133,9 +168,120 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
 
     if (confirmed != true) return;
+    if (!mounted) return;
 
-    await DraftStore.instance.remove(draft.id);
-    await _load();
+    await _startPendingDelete(draft);
+  }
+
+  /// يخفي التسجيل فورًا ويؤجّل الحذف الفعلي حتى تنتهي نافذة التراجع.
+  ///
+  /// ---------------------------------------------------------------------
+  /// **التسجيل لا يُشال من `_drafts` إطلاقًا** — يُستثنى بالعرض وحده
+  /// (انظر `_visibleDrafts`). وهذا اللي يخلي «الرجوع لمكانه الأصلي» بلا
+  /// أي حساب: القائمة ما تغيّرت أصلًا، فالتراجع مجرد رفع الاستثناء. لو
+  /// شلناه ثم أعدنا إدراجه بفهرس محفوظ، لصار الفهرس يكذب مع أول تغيير
+  /// يجي من مكان ثاني (تثبيت، أو تحميل جديد).
+  ///
+  /// **نافذة بأفضل جهد، لا سلة محذوفات.** لو مات التطبيق أثناء النافذة
+  /// يبقى التسجيل موجودًا — يعني ما نفقد شيئًا، بس الحذف ما يتم. الاتجاه
+  /// الآمن من الاثنين.
+  /// ---------------------------------------------------------------------
+  Future<void> _startPendingDelete(RecordingDraft draft) async {
+    final t = AppLocalizations.of(context)!;
+
+    // حذف ثانٍ ونافذة الأول لسا مفتوحة: نلتزم بالأول فورًا. تركهما معًا
+    // يعني شريطين متنافسين وسؤال «أي واحد يتراجع؟» بلا جواب.
+    await _settle(_pending, commit: true);
+    if (!mounted) return;
+
+    final pending = _PendingDelete(draft);
+    setState(() => _pending = pending);
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    final controller = messenger.showSnackBar(_undoSnackBar(t, pending));
+
+    // `closed` يرجّع سبب الإغلاق: `action` يعني إن المستخدم ضغط «تراجع».
+    final reason = await controller.closed;
+
+    // ممكن يكون حذفٌ لاحق سبقنا وألزمه — `_settle` نفسها تحرس، لكن نخرج
+    // بدري عشان ما نلمس الحالة بلا داعي.
+    if (pending.settled) return;
+    await _settle(pending, commit: reason != SnackBarClosedReason.action);
+  }
+
+  /// ينهي حذفًا معلّقًا: تنفيذًا أو تراجعًا. آمن للنداء المتكرر.
+  Future<void> _settle(_PendingDelete? pending, {required bool commit}) async {
+    if (pending == null || pending.settled) return;
+    pending.settled = true;
+
+    if (identical(_pending, pending)) {
+      if (mounted) {
+        setState(() => _pending = null);
+      } else {
+        _pending = null;
+      }
+    }
+
+    // التراجع ما يحتاج شيئًا: التسجيل لم يُمس أصلًا.
+    if (!commit) return;
+
+    await DraftStore.instance.remove(pending.draft.id);
+    if (mounted) await _load();
+  }
+
+  /// شريط التراجع.
+  ///
+  /// الثيم يجعل خلفية `SnackBar` شفافة (`snackBarTheme`)، فالسطح نبنيه
+  /// بأنفسنا — نفس ما تسوّي شاشة التسجيل. حاوية مصمتة لا زجاجية: الشريط
+  /// يطفو فوق قائمة تتمرّر، وهذا بالضبط ما تمنعه قاعدة الضباب.
+  SnackBar _undoSnackBar(AppLocalizations t, _PendingDelete pending) {
+    return SnackBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      padding: EdgeInsets.zero,
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      // أطول من الثانيتين المعتادتين بالتطبيق عمدًا: الرسائل الأخرى
+      // تأكيدات تُقرأ وتُنسى، وهذي تطلب قرارًا — وثانيتان ما تكفيان
+      // ليلاحظها المستخدم ويمد يده.
+      duration: const Duration(seconds: 5),
+      content: Container(
+        decoration: BoxDecoration(
+          color: MindropColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: MindropColors.glassBorder),
+        ),
+        padding: const EdgeInsetsDirectional.fromSTEB(18, 6, 8, 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                t.recordingDeleted,
+                style: MindropFonts.style(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: MindropColors.crimsonOnSurface,
+                ),
+              ),
+            ),
+            TextButton(
+              // نغلق الشريط بسبب `action`، وهو ما يقرأه `_startPendingDelete`
+              // ليفرّق بين تراجع صريح وانتهاء المهلة.
+              onPressed: () => ScaffoldMessenger.of(context)
+                  .hideCurrentSnackBar(reason: SnackBarClosedReason.action),
+              style: TextButton.styleFrom(
+                foregroundColor: MindropColors.crimsonPrimary,
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              child: Text(t.undo),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// منبثقة الإجراءات على الضغط المطوّل.
@@ -278,8 +424,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     if (confirmed != true) return;
 
+    // «احذف الكل» يشمل المعلّق أصلًا، فنغلق نافذته بدل ما يبقى شريط
+    // تراجع يشير لتسجيل انحذف من تحته.
+    await _settle(_pending, commit: false);
+    if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
     await DraftStore.instance.removeAll();
-    await _load();
+    if (mounted) await _load();
   }
 
   String _formatDuration(Duration d) {
@@ -394,7 +545,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           const Spacer(),
           // يظهر بس لو فيه شيء نحذفه — زر معطّل بلا فايدة أسوأ من ما فيه زر.
-          if (_drafts.isNotEmpty)
+          if (_visibleDrafts.isNotEmpty)
             IconButton(
               onPressed: _confirmDeleteAll,
               icon: const Icon(Icons.delete_sweep_outlined),
@@ -411,7 +562,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     // لجزء من الثانية عند كل فتح ثم اختفى.
     if (_loading) return const SizedBox.shrink();
 
-    if (_drafts.isEmpty) {
+    if (_visibleDrafts.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -442,8 +593,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     // كأنه ما انحذف من الثاني.
     //
     // الترتيب داخل كل قسم يبقى ترتيب [DraftStore] نفسه (الأحدث أولًا).
-    final pinned = _drafts.where((d) => d.pinned);
-    final rest = _drafts.where((d) => !d.pinned);
+    final visible = _visibleDrafts;
+    final pinned = visible.where((d) => d.pinned);
+    final rest = visible.where((d) => !d.pinned);
 
     if (pinned.isNotEmpty) {
       rows.add(_Row.header(t.historyPinned));
@@ -726,6 +878,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
   }
+}
+
+/// حذف مؤكَّد بانتظار انتهاء نافذة التراجع.
+///
+/// [settled] يمنع التنفيذ مرتين: نفس الحذف قد يصل من مسارين — انتهاء
+/// الشريط، أو حذف تالٍ يلزمه قبل أوانه — والسبق بينهما غير مضمون.
+class _PendingDelete {
+  _PendingDelete(this.draft);
+
+  final RecordingDraft draft;
+  bool settled = false;
 }
 
 /// صف بالقائمة: إما عنوان مجموعة وإما بطاقة تسجيل، لا الاثنان.
