@@ -129,5 +129,21 @@ the protection can't vanish if one file is moved.
 
 `lib/firebase_options.dart` and `android/app/google-services.json` **are**
 committed. Firebase client API keys identify a project, they don't authorise
-access; Google documents them as safe to include in client code. Security comes
-from Firestore Rules and App Check.
+access; Google documents them as safe to include in client code.
+
+**Firestore Rules are the only client-side boundary. App Check is _not_
+enabled** — there is no App Check code anywhere in this repo. An earlier version
+of this section claimed otherwise; it was wrong.
+
+What that means concretely: sign-in is anonymous and the client key ships inside
+the APK, so anyone can mint a *legitimate* ID token for this project. The token
+proves "an account in this project", not "the owner of this app". Firestore Rules
+still hold — each uid can only read and write its own documents — but they place
+no ceiling on how many documents an attacker can create under a uid of their own.
+
+The backend's own guard is therefore a cost guard, not an identity one: a
+per-uid rate limit on `POST /recordings/:recordingId`
+(`backend/src/middleware/uploadRateLimit.js`), since every accepted upload buys a
+Whisper call and an LLM call on the owner's account. It is an in-memory counter,
+so a restart resets it. Enabling App Check, or moving the counter to a shared
+store, are both still open.
