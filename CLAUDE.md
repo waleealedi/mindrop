@@ -726,45 +726,74 @@ same rule as the cards.
 `Semantics(onLongPressHint:)` is on the row because a long-press has no visual
 affordance at all; without it a screen-reader user cannot discover the menu.
 
-### The sheet's styling — and the one blur carve-out it takes
+### The actions popup is anchored to the finger, not to the screen edge
 
-[recording_actions_sheet.dart](lib/widgets/recording_actions_sheet.dart) owns
-the look; the screen only decides which actions exist and in what order.
+[recording_actions_popup.dart](lib/widgets/recording_actions_popup.dart) — a
+compact pill of four icon-only chips that opens **at the long-press point**.
 
-- **`showGeneralDialog`, not `showModalBottomSheet`.** The latter accepts a
-  barrier *colour* and nothing more. A frosted backdrop is a `BackdropFilter`
-  layer covering the screen behind the sheet, which needs a full-screen
-  `pageBuilder` — so the route is built by hand. Dismissal is a `GestureDetector`
-  on the blur layer rather than `barrierDismissible`, because the blur sits above
-  the barrier and would otherwise swallow the tap.
-- **Icon chips reuse the shipped convention exactly**: circle filled at
-  `alpha: 0.14`, which is the same value the row's status chip uses. Rename /
-  Pin / Share take `crimsonPrimaryContainer` for the chip and `crimsonPrimary`
-  for the glyph — live crimson behind, text-safe crimson on top. Delete takes
-  `errorRed` for both, plus a divider and extra spacing above it. **No new tone
-  and no new alpha were introduced.**
-- **Radius is 16**, matching `dialogTheme.shape` in `MindropTheme.dark()`. There
-  is no radius *token* in this project — every other radius is a per-component
-  literal (cards 16, playback card 28, record dock 36) — and 16 is the only one
-  defined at theme level. The sheet is dialog-family, so it takes the dialog
-  value. It previously used an arbitrary 24.
-- **Rows are ~64pt** (12pt vertical padding around a 40pt chip) rather than
-  `ListTile`'s ~56, and the sheet is short enough that the extra height costs
-  nothing.
-- **Motion rides the route's own animation** — fade + a 0.97→1 scale anchored to
-  `bottomCenter` + a 6% slide. No `AnimationController`, no extra `Ticker`.
+It **replaced** a full-width bottom sheet (`recording_actions_sheet.dart`, now
+deleted — there is no second implementation to choose between). The sheet worked;
+it just treated a row-scoped action as a screen-level event, arriving from the
+edge, spanning the width, and pulling the eye away from the row that was pressed.
+The capsule keeps the row-to-action relationship visible without stating it.
 
-**Blur exception, deliberate and bounded.** The no-`BackdropFilter` rule targets
-blur inside a scrolling list or above a surface that repaints per frame. This is
-neither: the sheet only opens once scrolling has stopped, what sits behind it is
-static while it is up, and the layer is transient — one filter, gone on dismiss.
-Same carve-out the record dock takes. **The list itself still has no blur.**
+- **The blur exception died with the sheet.** That sheet carried a full-screen
+  `BackdropFilter` as a documented carve-out. The popup needs none — it is small
+  and already beside the finger — so its barrier is fully transparent and exists
+  only to catch the dismiss tap. **The only live `BackdropFilter` left in the app
+  is `GlassContainer`**, used by the record and playback screens.
+- **Colour is unchanged from the sheet**: circular chip at `alpha: 0.14` — the
+  same value as the row's status chip — filled `crimsonPrimaryContainer` under a
+  `crimsonPrimary` glyph, and `errorRed` for both on Delete. No new tone, no new
+  alpha, nothing re-derived.
+- **Icon-only, so `tooltip:` is load-bearing, not decoration.** `IconButton`
+  feeds it to both the long-press tooltip and the screen-reader label. An
+  unlabelled icon button is unreadable to a screen reader; the `label` field on
+  `RecordingAction` is required for exactly that reason.
+- The container is a `StadiumBorder`, so the pill radius follows its own height
+  instead of a literal that has to be kept in sync with the chip size.
 
-RTL needs nothing special here: layout uses `EdgeInsetsDirectional` and `Row`,
-which mirror on their own, and none of the four glyphs (`edit`, `push_pin`,
-`ios_share`, `delete`) is directional. The headline routes through
-`TranscriptText`, so it follows its own content's direction rather than the UI
-locale — the same rule as every other piece of user text.
+### Popup positioning, and the RTL question it raises
+
+`CustomSingleChildLayout` + a `SingleChildLayoutDelegate`. The delegate is handed
+the screen size **and the measured child size**, so nothing hardcodes the pill's
+width or height — change the chip count or the icon size and the flipping and
+clamping still hold.
+
+- **Vertical: above the finger by default**, because the hand covers what is
+  below it. Flips underneath when there is no room above, then clamps into
+  whatever is left if both sides are tight.
+- **Horizontal: centred on the touch point, clamped to both edges** so it can
+  never overflow.
+- Insets come from `MediaQuery.padding`, not raw screen bounds — otherwise the
+  pill lands under the gesture bar on a full-bleed device.
+- Both clamps go through `math.max(min, max)` so a child taller or wider than the
+  available space cannot produce an inverted range and throw.
+
+**RTL needs no positioning maths, and that is a finding rather than an
+oversight.** Centring and clamping are symmetric about a point, so they give the
+same answer in either direction. Direction shows up only in the *order* of the
+chips, which `Row` mirrors on its own, and the pill's padding is symmetric. The
+one thing to not "fix" here is adding a directional offset — it would break LTR
+and RTL equally.
+
+The anchor is captured by a `Listener` on the list recording each pointer-down,
+**not** by `GestureDetector.onLongPressStart`: `InkWell` does not expose
+long-press start details, and adding a second gesture recogniser over it puts two
+recognisers in the arena for the same touch. `Listener` sees the raw pointer
+before the gesture layer, so it competes with nothing.
+
+### Delete has no undo, and nothing here pretends otherwise
+
+`DraftStore.remove` deletes the `.m4a` from disk and drops the index entry
+immediately. The `DeletionQueueService` tombstone is **not** an undo buffer —
+it is a `List<String>` of ids whose whole purpose is the opposite, guaranteeing
+the *cloud* copy gets deleted too. Nothing anywhere retains a restorable copy.
+
+So the red tint is differentiation, not a safety net. The actual barrier is the
+pre-existing confirm dialog in `_confirmDelete`. **A real undo would require
+keeping deleted audio somewhere for a grace period — a storage-lifecycle
+decision, not a styling one.**
 
 ### Pinned section sits above the date groups, not inside them
 

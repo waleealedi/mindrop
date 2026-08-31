@@ -12,7 +12,7 @@ import '../services/draft_store.dart';
 import '../services/firestore_sync_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ambient_background.dart';
-import '../widgets/recording_actions_sheet.dart';
+import '../widgets/recording_actions_popup.dart';
 import '../widgets/rename_dialog.dart';
 import '../widgets/transcript_text.dart';
 import 'playback_screen.dart';
@@ -32,6 +32,14 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   List<RecordingDraft> _drafts = const <RecordingDraft>[];
   bool _loading = true;
+
+  /// آخر نقطة لمس بإحداثيات الشاشة — مرساة منبثقة الإجراءات.
+  ///
+  /// نلتقطها بـ `Listener` بدل `onLongPressStart` تبع `GestureDetector`:
+  /// `InkWell` ما يكشف تفاصيل بداية الضغط المطوّل، وإضافة متعرّف إيماءات
+  /// ثانٍ فوقه تدخل الاثنين ساحة تنافس على نفس اللمسة بلا داعي. `Listener`
+  /// يستمع للمؤشر الخام قبل الإيماءات، فما يزاحم أحدًا.
+  Offset _lastPointer = Offset.zero;
 
   /// ما وصلنا من الباك-إند عبر Firestore، مفتاحه معرّف التسجيل.
   Map<String, RemoteRecording> _remote = const {};
@@ -130,25 +138,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
     await _load();
   }
 
-  /// قائمة الإجراءات على الضغط المطوّل.
+  /// منبثقة الإجراءات على الضغط المطوّل.
   ///
-  /// **ورقة سفلية لا `PopupMenu`:** الصف يمتد بعرض الشاشة، والقائمة
-  /// المنبثقة عند نقطة اللمس تطلع بمكان مختلف كل مرة. الورقة تجي من نفس
-  /// الحافة دائمًا وتوصلها الإبهام، وتسع سطرًا يقول **أي** تسجيل نتعامل
-  /// معه — سؤال حقيقي بقائمة صفوفها متشابهة.
-  ///
-  /// الشكل والحركة والضباب كلها بـ [showRecordingActionsSheet]؛ هنا نقرر
-  /// الإجراءات وترتيبها فقط.
+  /// كبسولة عائمة عند الإصبع، لا ورقة من حافة الشاشة: الإجراء موضعي على
+  /// صف بعينه، فمكانه عند ذاك الصف. التفاصيل والمواضع بـ
+  /// [showRecordingActionsPopup]؛ هنا نقرر الإجراءات وترتيبها فقط.
   Future<void> _showActions(RecordingDraft draft, String? title) async {
     final t = AppLocalizations.of(context)!;
 
-    // سطر الترويسة: العنوان إن وُجد، وإلا مقتطف من النص المفرَّغ. نصّان
-    // موجودان أصلًا بالصف — ما نجيب شيئًا جديدًا لأجل الورقة.
-    final headline = title ?? _remote[draft.id]?.transcript?.trim();
-
-    await showRecordingActionsSheet(
+    await showRecordingActionsPopup(
       context,
-      headline: (headline != null && headline.isNotEmpty) ? headline : null,
+      anchor: _lastPointer,
       semanticLabel: t.recordingActions,
       actions: [
         RecordingAction(
@@ -169,7 +169,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
         RecordingAction(
           icon: Icons.delete_outline,
           label: t.delete,
-          // الوحيد بلا تراجع — يُفصل بنبرته وبفاصل فوقه.
+          // الوحيد بلا تراجع — يُميَّز بنبرته الحمراء. الحوار التأكيدي
+          // القائم هو الحاجز الفعلي (انظر [_confirmDelete]).
           destructive: true,
           onSelected: () => _confirmDelete(draft),
         ),
@@ -459,23 +460,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
       rows.add(_Row.tile(d));
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      itemCount: rows.length,
-      // **كل صف بمفتاح ثابت.** بدونها يطابق `ListView.builder` العناصر
-      // بموضعها لا بهويتها، وقسم «المثبَّتة» يعيد الترتيب فعلًا: تثبيت
-      // تسجيل ينقله لأعلى القائمة، فيرث عنصرُ الموضع القديم تسجيلًا آخر.
-      // الصف نفسه بلا حالة، لكن `InkWell` و`Material` تحتهما حالة تموّج —
-      // فالنتيجة تموّج ضغطة يظهر على صف غير الذي ضُغط.
-      //
-      // العناوين كمان: قائمة نصف مُفتاحة تبقى تطابق العناوين بالموضع،
-      // وظهور قسم «المثبَّتة» أو اختفاؤه يزحزح كل ما بعده بمقدار واحد.
-      itemBuilder: (context, i) {
-        final row = rows[i];
-        final draft = row.draft;
-        if (draft == null) return _buildGroupHeader(row.label!, i == 0);
-        return _buildTile(draft, t, localeName);
-      },
+    return Listener(
+      // نسجّل كل نزول مؤشر: لما يتحوّل لضغطة مطوّلة تكون المرساة جاهزة.
+      // التمرير يمر من هنا كمان، وتسجيل موضعه بلا أثر.
+      onPointerDown: (e) => _lastPointer = e.position,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        itemCount: rows.length,
+        // **كل صف بمفتاح ثابت.** بدونها يطابق `ListView.builder` العناصر
+        // بموضعها لا بهويتها، وقسم «المثبَّتة» يعيد الترتيب فعلًا: تثبيت
+        // تسجيل ينقله لأعلى القائمة، فيرث عنصرُ الموضع القديم تسجيلًا آخر.
+        // الصف نفسه بلا حالة، لكن `InkWell` و`Material` تحتهما حالة تموّج —
+        // فالنتيجة تموّج ضغطة يظهر على صف غير الذي ضُغط.
+        //
+        // العناوين كمان: قائمة نصف مُفتاحة تبقى تطابق العناوين بالموضع،
+        // وظهور قسم «المثبَّتة» أو اختفاؤه يزحزح كل ما بعده بمقدار واحد.
+        itemBuilder: (context, i) {
+          final row = rows[i];
+          final draft = row.draft;
+          if (draft == null) return _buildGroupHeader(row.label!, i == 0);
+          return _buildTile(draft, t, localeName);
+        },
+      ),
     );
   }
 
